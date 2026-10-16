@@ -1,0 +1,9 @@
+{
+  "autohotkey": {
+    "version": "2.0.28",
+    "runtimeUrl": "https://github.com/AutoHotkey/AutoHotkey/releases/download/v2.0.28/AutoHotkey_2.0.28.zip",
+    "runtimeSha256": "b63be7548792b4ad0dfe424d91cc69376694ed2f758245b7a75a0c77d693b478",
+    "sourceUrl": "https://codeload.github.com/AutoHotkey/AutoHotkey/zip/refs/tags/v2.0.28",
+    "sourceSha256": "73eae232e45b91d5eb5d80ecee34ff357b6f58fad83a2e624f39a80bcf345b8a"
+  }
+}

@@ -1,0 +1,12 @@
+*.zip
+*.log
+*.err
+*.out
+settings.ini
+*.nxs
+*.lnk
+.nx/
+ssh/
+work/
+dist/
+build/
