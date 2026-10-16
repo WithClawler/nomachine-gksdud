@@ -26,7 +26,7 @@ if (!$Worker) {
         $taskVersion = (Get-Content (Join-Path $ProjectRoot 'VERSION') -Raw).Trim()
         Copy-Item (Join-Path $ProjectRoot "dist\NoMachineHangulBridge-$taskVersion-windows-x64-setup.exe") (Join-Path $taskRoot 'current.exe')
         Copy-Item -LiteralPath $PSCommandPath -Destination (Join-Path $taskRoot 'Test-Install.ps1')
-        foreach ($taskPart in @('lib', 'tests')) {
+        foreach ($taskPart in @('lib', 'tests', 'VERSION', 'build-dependencies.json')) {
             Copy-Item -LiteralPath (Join-Path $ProjectRoot $taskPart) -Destination $taskRoot -Recurse
         }
         $taskPassword = ConvertTo-SecureString ('Nmhb!' + [guid]::NewGuid().ToString('N') + '9aZ') -AsPlainText -Force
@@ -47,8 +47,17 @@ if (!$Worker) {
         if ($taskWorker.ExitCode -ne 0 -or $taskText -notmatch 'PASS \d+ non-administrator install checks') { throw 'Installer lifecycle failed.' }
     } finally {
         if ($taskWorker -and !$taskWorker.HasExited) { $taskWorker.Kill(); $taskWorker.WaitForExit() }
+        if ($taskWorker) { $taskWorker.Dispose() }
         if ($taskCreatedUser) { Remove-LocalUser -Name $taskUser }
-        if (Test-Path $taskRoot) { Remove-Item -LiteralPath $taskRoot -Recurse -Force }
+        # Inno's self-deleting uninstaller helper briefly retains its log handle
+        # after the parent exits. Wait for that owned helper; never kill by name.
+        for ($taskAttempt = 0; $taskAttempt -lt 40 -and (Test-Path $taskRoot); $taskAttempt++) {
+            try { Remove-Item -LiteralPath $taskRoot -Recurse -Force }
+            catch {
+                if ($taskAttempt -eq 39) { throw }
+                Start-Sleep -Milliseconds 250
+            }
+        }
     }
     return
 }
@@ -129,6 +138,7 @@ try {
     $taskRuntime = Join-Path $taskApp 'runtime\AutoHotkey64.exe'
     $taskEntry = Join-Path $taskApp 'NoMachineHangulBridge.ahk'
     Assert-Install (Test-Path $taskRuntime) 'previous version installs per user without elevation'
+    Assert-Install ((Get-Content (Join-Path $taskApp 'VERSION') -Raw).Trim() -eq '0.1.2-alpha') 'installed baseline is the real previous version'
     Assert-Install (!(Test-Path $taskStartup)) 'clean install does not enable startup'
     $taskFirst = Start-Owned $taskRuntime ('"' + $taskEntry + '" --quiet')
     Start-Sleep -Seconds 2
@@ -150,6 +160,11 @@ try {
     [IO.File]::WriteAllText($taskUnrelatedScript, "#Requires AutoHotkey v2.0`nPersistent()`nSetTimer(() => ExitApp(), -180000)`n")
     $taskUnrelated = Start-Owned $taskUnrelatedRuntime ('"' + $taskUnrelatedScript + '"')
     Wait-Owned (Start-Owned (Join-Path $FixtureRoot 'current.exe') '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART')
+    Assert-Install ((Get-Content (Join-Path $taskApp 'VERSION') -Raw).Trim() -eq (Get-Content (Join-Path $FixtureRoot 'VERSION') -Raw).Trim()) 'installed version changes to current release'
+    $taskAhk = (Get-Content (Join-Path $FixtureRoot 'build-dependencies.json') -Raw | ConvertFrom-Json).autohotkey
+    $taskUpstreamSource = Join-Path $taskApp "third-party\AutoHotkey\AutoHotkey-source-$($taskAhk.version).zip"
+    Assert-Install ((Get-FileHash $taskUpstreamSource).Hash -eq $taskAhk.sourceSha256) 'installer includes the exact upstream runtime source'
+    Assert-Install ((Get-Item (Join-Path $taskApp 'third-party\AutoHotkey\license.txt')).Length -gt 1000) 'installer preserves runtime license'
     Assert-Install ((Get-FileHash $taskSettings).Hash -eq $taskProfileHash) 'real version upgrade preserves exact saved settings'
     $taskLink = Read-Shortcut $taskStartup
     Assert-Install ($taskLink.TargetPath -eq $taskRuntime -and $taskLink.Arguments -eq ('"' + $taskEntry + '" --quiet')) 'upgrade startup points at installed runtime and script'
