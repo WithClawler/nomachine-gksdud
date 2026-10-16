@@ -16,12 +16,14 @@
 
 ## 3. Delivery and integration evidence
 
-- [ ] 3.1 최종 커밋과 태그를 push하고 Actions 성공·릴리스 파일·다운로드 체크섬을 확인한다.
+- [x] 3.1 최종 커밋과 태그를 push하고 Actions 성공·릴리스 파일·다운로드 체크섬을 확인한다.
 - [ ] 3.2 실제 Windows/NoMachine 환경에서 물리 키 등록, Mac 전환, 다른 OS/창 유지 여부를 확인하고 관측 결과를 기록한다.
-- [ ] 3.3 OpenSpec strict validation과 최종 저장소 상태를 확인하고 남은 제한을 보고한다.
+- [x] 3.3 OpenSpec strict validation과 최종 저장소 상태를 확인하고 남은 제한을 보고한다.
 
 ## Workflow follow-up
 
 - 실기 검증을 포함한 요구 사항이 모두 충족됐을 때 변경을 archive한다.
 
 검증 근거: Actions 38883919479 (`9e6e524`)에서 AHK/프로세스 92개, 비관리자 설치 34개, 패키지 검사 통과. 실제 원격 연결은 접근 가능한 Windows 실기 환경이 없어 미완료다.
+
+배포 근거: 태그 v0.1.3-alpha의 Actions 38884325054 성공. 공개 prerelease의 네 자산을 인증 없이 HTTP 200으로 내려받아 GitHub asset digest·SHA256SUMS·로컬 파일을 대조했다. 바이너리는 원본과 일치하고 소스는 Windows CRLF 차이를 제외하고 tag checkout과 일치한다.
