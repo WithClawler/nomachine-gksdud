@@ -22,6 +22,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
+          persist-credentials: false
       - name: Check release version
         shell: pwsh
         run: |
@@ -63,6 +64,8 @@ jobs:
           if gh release view "$RELEASE_TAG" --json isDraft > release.json 2>/dev/null; then
             test "$(jq -r .isDraft release.json)" = true || { echo 'Existing release is public; refusing to replace its files.'; exit 1; }
           else
-            gh release create "$RELEASE_TAG" --verify-tag --draft --title "$RELEASE_TAG" --generate-notes
+            flags=()
+            if [[ "$RELEASE_TAG" == *-* ]]; then flags+=(--prerelease); fi
+            gh release create "$RELEASE_TAG" --verify-tag --draft --title "$RELEASE_TAG" --generate-notes "${flags[@]}"
           fi
           gh release upload "$RELEASE_TAG" dist/* --clobber

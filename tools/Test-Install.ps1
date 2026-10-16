@@ -102,13 +102,14 @@ try {
         New-Item -Path $taskRegistry -Force | Out-Null
         foreach ($taskName in $taskShellFolders.Keys) {
             [IO.Directory]::CreateDirectory($taskShellFolders[$taskName]) | Out-Null
-            New-ItemProperty -Path $taskRegistry -Name $taskName -Value $taskShellFolders[$taskName] -PropertyType String -Force | Out-Null
+            $taskPropertyType = if ($taskShellKey -eq 'User Shell Folders') { 'ExpandString' } else { 'String' }
+            New-ItemProperty -Path $taskRegistry -Name $taskName -Value $taskShellFolders[$taskName] -PropertyType $taskPropertyType -Force | Out-Null
         }
     }
     $taskApp = Join-Path $env:LOCALAPPDATA 'Programs\NoMachineHangulBridge'
     $taskProfile = Join-Path $env:LOCALAPPDATA 'NoMachineHangulBridge'
     $taskSettings = Join-Path $taskProfile 'settings.ini'
-    $taskStartupDir = [Environment]::GetFolderPath([Environment+SpecialFolder]::Startup, [Environment+SpecialFolderOption]::Create)
+    $taskStartupDir = $taskShellFolders['Startup']
     $taskStartup = Join-Path $taskStartupDir 'NoMachine Hangul Bridge.lnk'
     Assert-Install (!(Test-Path $taskApp) -and !(Test-Path $taskProfile)) 'isolated account starts clean'
     Wait-Owned (Start-Owned (Join-Path $FixtureRoot 'previous.exe') '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART')
