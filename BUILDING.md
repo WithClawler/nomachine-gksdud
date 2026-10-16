@@ -1,6 +1,6 @@
 # Windows 빌드와 배포
 
-공개 저장소는 [doctor-clawler/nomachine-gksdud](https://github.com/doctor-clawler/nomachine-gksdud)입니다.
+공개 저장소는 [WithClawler/nomachine-gksdud](https://github.com/WithClawler/nomachine-gksdud)입니다.
 전달된 `nomachine-hangul-bridge` 폴더 자체가 저장소 루트이며 `.github/`, `tools/`, `installer/`가 바로 아래에 있습니다.
 
 ## GitHub Actions

@@ -22,7 +22,7 @@ gksdud나 SSH는 필요 없습니다. 이 도구는 Mac 입력기를 직접 변�
 
 ## 시작하기
 
-1. [GitHub Releases](https://github.com/doctor-clawler/nomachine-gksdud/releases)에서 `windows-x64-setup.exe`를 내려받아 실행합니다. 관리자 권한 없이 현재 사용자에게 설치되며 AutoHotkey를 별도로 설치할 필요가 없습니다. 설치 후 시작 메뉴의 **NoMachine Hangul Bridge**를 실행합니다.
+1. [GitHub Releases](https://github.com/WithClawler/nomachine-gksdud/releases)에서 `windows-x64-setup.exe`를 내려받아 실행합니다. 관리자 권한 없이 현재 사용자에게 설치되며 AutoHotkey를 별도로 설치할 필요가 없습니다. 설치 후 시작 메뉴의 **NoMachine Hangul Bridge**를 실행합니다.
 2. 최초 실행에만 **한영키 감지 / 변경**을 누르고 실제 한영키를 누릅니다. 감지한 즉시 저장되며, 창을 닫거나 다시 실행해도 재등록할 필요가 없습니다. VK15를 일괄 가정하지 않고 실제 VK와 스캔 코드를 저장합니다. 매핑에는 측정한 VK를 사용합니다. 키보드를 바꿨다면 같은 버튼으로 다시 등록합니다.
 3. Mac의 **시스템 설정 → 키보드 → 키보드 단축키 → 입력 소스**에 설정된 단축키와 도구의 선택을 맞춥니다. 기본값은 `Control+Space`입니다. 도구가 Mac 설정을 자동 변경하지는 않습니다.
 4. NoMachine에서 Mac에 연결합니다. 도구의 연결 상태에 `Mac 판별 완료`가 표시되는지 확인합니다.
