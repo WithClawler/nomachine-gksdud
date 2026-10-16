@@ -9,12 +9,17 @@ function Assert-Task([bool]$Condition, [string]$Label) {
     $script:taskChecks++
 }
 function Start-TaskAhk([string]$Arguments) {
-    $taskProcess = Start-Process $Runtime -ArgumentList ('/ErrorStdOut ' + $Arguments) -PassThru
+    $taskLog = Join-Path $script:taskRoot ([guid]::NewGuid().ToString('N'))
+    $taskProcess = Start-Process $Runtime -ArgumentList ('/ErrorStdOut ' + $Arguments) -PassThru -RedirectStandardOutput "$taskLog.out" -RedirectStandardError "$taskLog.err"
+    $taskProcess | Add-Member NoteProperty OutputPath "$taskLog.out"
+    $taskProcess | Add-Member NoteProperty ErrorPath "$taskLog.err"
     $script:taskProcesses.Add($taskProcess)
     return $taskProcess
 }
 function Wait-TaskExit([Diagnostics.Process]$Process) {
-    if (!$Process.WaitForExit(15000)) { throw 'Child process timed out.' }
+    $taskExited = $Process.WaitForExit(15000)
+    Write-Output ([IO.File]::ReadAllText($Process.OutputPath) + [IO.File]::ReadAllText($Process.ErrorPath))
+    if (!$taskExited) { throw 'Child process timed out.' }
     Assert-Task ($Process.ExitCode -eq 0) 'child process succeeds'
 }
 try {
