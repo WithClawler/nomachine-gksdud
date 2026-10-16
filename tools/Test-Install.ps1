@@ -97,6 +97,9 @@ try {
     $env:USERPROFILE = (Get-ItemProperty -LiteralPath $taskProfileKey).ProfileImagePath
     $env:LOCALAPPDATA = Join-Path $env:USERPROFILE 'AppData\Local'
     $env:APPDATA = Join-Path $env:USERPROFILE 'AppData\Roaming'
+    $env:TEMP = Join-Path $env:LOCALAPPDATA 'Temp'
+    $env:TMP = $env:TEMP
+    [IO.Directory]::CreateDirectory($env:TEMP) | Out-Null
     # A new runner account has never logged into Explorer. Initialize its normal
     # per-user shell folders so Inno and AHK resolve the same actual user paths.
     $taskShellFolders = @{
