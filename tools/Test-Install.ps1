@@ -82,8 +82,29 @@ try {
     $taskIdentity = [Security.Principal.WindowsIdentity]::GetCurrent()
     $taskPrincipal = [Security.Principal.WindowsPrincipal]::new($taskIdentity)
     Assert-Install (!$taskPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) 'worker has a real non-administrator token'
-    $env:LOCALAPPDATA = [Environment]::GetFolderPath('LocalApplicationData')
-    $env:USERPROFILE = [Environment]::GetFolderPath('UserProfile')
+    Assert-Install ($taskIdentity.Name.Split('\')[-1] -like 'nmhb_*') 'worker is the isolated CI account'
+    $taskProfileKey = 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $taskIdentity.User.Value
+    $env:USERPROFILE = (Get-ItemProperty -LiteralPath $taskProfileKey).ProfileImagePath
+    $env:LOCALAPPDATA = Join-Path $env:USERPROFILE 'AppData\Local'
+    $env:APPDATA = Join-Path $env:USERPROFILE 'AppData\Roaming'
+    # A new runner account has never logged into Explorer. Initialize its normal
+    # per-user shell folders so Inno and AHK resolve the same actual user paths.
+    $taskShellFolders = @{
+        'AppData' = $env:APPDATA
+        'Local AppData' = $env:LOCALAPPDATA
+        'Desktop' = (Join-Path $env:USERPROFILE 'Desktop')
+        'Start Menu' = (Join-Path $env:APPDATA 'Microsoft\Windows\Start Menu')
+        'Programs' = (Join-Path $env:APPDATA 'Microsoft\Windows\Start Menu\Programs')
+        'Startup' = (Join-Path $env:APPDATA 'Microsoft\Windows\Start Menu\Programs\Startup')
+    }
+    foreach ($taskShellKey in @('Shell Folders', 'User Shell Folders')) {
+        $taskRegistry = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\' + $taskShellKey
+        New-Item -Path $taskRegistry -Force | Out-Null
+        foreach ($taskName in $taskShellFolders.Keys) {
+            [IO.Directory]::CreateDirectory($taskShellFolders[$taskName]) | Out-Null
+            New-ItemProperty -Path $taskRegistry -Name $taskName -Value $taskShellFolders[$taskName] -PropertyType String -Force | Out-Null
+        }
+    }
     $taskApp = Join-Path $env:LOCALAPPDATA 'Programs\NoMachineHangulBridge'
     $taskProfile = Join-Path $env:LOCALAPPDATA 'NoMachineHangulBridge'
     $taskSettings = Join-Path $taskProfile 'settings.ini'

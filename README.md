@@ -22,17 +22,31 @@ gksdud나 SSH는 필요 없습니다. 이 도구는 Mac 입력기를 직접 변�
 
 ## 시작하기
 
-1. [공식 배포처](https://www.autohotkey.com/)에서 **AutoHotkey v2**를 설치합니다.
-2. 이 폴더를 계속 사용할 위치에 압축 해제합니다. `Start.cmd`를 실행합니다.
-3. 최초 실행에만 **한영키 감지 / 변경**을 누르고 실제 한영키를 누릅니다. 감지한 즉시 저장되며, 창을 닫거나 다시 실행해도 재등록할 필요가 없습니다. VK15를 일괄 가정하지 않고 실제 VK와 스캔 코드를 저장합니다. 매핑에는 측정한 VK를 사용합니다.
-4. Mac의 **시스템 설정 → 키보드 → 키보드 단축키 → 입력 소스**에 설정된 단축키와 도구의 선택을 맞춥니다. 기본값은 `Control+Space`입니다. 도구가 Mac 설정을 자동 변경하지는 않습니다.
-5. NoMachine에서 Mac에 연결합니다. 도구의 연결 상태에 `Mac 판별 완료`가 표시되는지 확인합니다.
-6. 설정을 저장한 뒤 NoMachine에서 한영키를 눌러 전환을 확인하고, Windows 앱에서도 기존 한영키 동작을 확인합니다.
+1. [GitHub Releases](https://github.com/doctor-clawler/nomachine-gksdud/releases)에서 `windows-x64-setup.exe`를 내려받아 실행합니다. 관리자 권한 없이 현재 사용자에게 설치되며 AutoHotkey를 별도로 설치할 필요가 없습니다. 설치 후 시작 메뉴의 **NoMachine Hangul Bridge**를 실행합니다.
+2. 최초 실행에만 **한영키 감지 / 변경**을 누르고 실제 한영키를 누릅니다. 감지한 즉시 저장되며, 창을 닫거나 다시 실행해도 재등록할 필요가 없습니다. VK15를 일괄 가정하지 않고 실제 VK와 스캔 코드를 저장합니다. 매핑에는 측정한 VK를 사용합니다. 키보드를 바꿨다면 같은 버튼으로 다시 등록합니다.
+3. Mac의 **시스템 설정 → 키보드 → 키보드 단축키 → 입력 소스**에 설정된 단축키와 도구의 선택을 맞춥니다. 기본값은 `Control+Space`입니다. 도구가 Mac 설정을 자동 변경하지는 않습니다.
+4. NoMachine에서 Mac에 연결합니다. 도구의 연결 상태에 `Mac 판별 완료`가 표시되는지 확인합니다.
+5. NoMachine에서 한영키를 짧게 누르고 길게 눌러 실제 입력 소스가 각각 한 번 바뀌는지 확인합니다. Windows 앱에서도 기존 한영키 동작을 확인합니다.
+
+설치 없이 쓰려면 `windows-x64-portable.zip`을 계속 사용할 폴더에 풀고 `Start.cmd`를 실행하세요. `runtime/`과 `third-party/`를 포함한 전체 폴더를 유지해야 합니다.
+소스 ZIP 또는 Git checkout으로 실행할 때만 [공식 AutoHotkey v2](https://www.autohotkey.com/) 설치가 필요합니다.
+
+현재 배포는 **서명되지 않은 alpha 빌드**입니다. Windows 보안 경고가 표시될 수 있습니다. 다운로드 파일은 같은 릴리스의 `SHA256SUMS.txt`와 `Get-FileHash -Algorithm SHA256 <파일>` 결과로 대조할 수 있습니다.
 
 등록된 키는 `%LOCALAPPDATA%\NoMachineHangulBridge\settings.ini`에서 자동 복원합니다. 앱 폴더 이동이나 업데이트로 설정을 초기화하지 않습니다. 키 변경과 달리 출력 단축키·로그 폴더·자동 시작 옵션 변경은 저장 버튼으로 확정합니다.
 
 기본 로그 폴더는 `%USERPROFILE%\.nx`입니다. NoMachine에서 다른 위치를 사용한다면 설정에서 그 폴더를 지정합니다.
 기본 설치 위치가 아닌 AutoHotkey를 사용한다면 `NoMachineHangulBridge.ahk`를 AutoHotkey v2로 직접 실행하세요.
+
+## 업데이트
+
+알림 영역에서 앱을 종료한 뒤 새 설치 파일을 실행합니다. 키 설정은 설치 폴더 밖에 있으므로 다시 등록할 필요가 없습니다.
+자동 시작을 이미 선택했다면 설치기가 기존 앱 전용 바로가기를 새 설치 경로로 갱신합니다. 선택하지 않았다면 새로 등록하지 않습니다.
+portable은 종료 후 전체 폴더를 새 버전으로 교체하세요. portable 폴더 자체를 옮겼다면 설정에서 자동 시작을 다시 저장해 새 경로를 반영하세요.
+
+0.1.3부터 동일 Windows 세션에서 여러 폴더의 사본을 실행해도 첫 사본만 매핑합니다. 두 번째 사본은 기존 사본을 종료하지 않습니다.
+0.1.2 이전 사본에는 이 보호 장치가 없으므로 첫 업데이트 전에 기존 사본을 모두 트레이에서 종료하세요.
+실행 중인 0.1.3 이상 사본이 있으면 설치·제거가 종료를 안내하며, 무인 설치는 실패로 반환합니다. 다른 AutoHotkey 프로그램을 일괄 종료하지 않습니다.
 
 ## 실행 중인지 확인하기
 
@@ -57,7 +71,8 @@ Windows가 아이콘을 숨겼다면 알림 영역의 **∧(숨겨진 아이콘 
 - 알림 영역 **‘한’ 아이콘** 우클릭 → **일시 중지** 또는 **종료**.
 - 설정 창을 닫으면 알림 영역에서 계속 실행됩니다.
 - 자동 시작은 기본으로 등록하지 않습니다. 설정에서 `Windows 로그인 시 실행`을 선택하고 저장했을 때만 현재 사용자 시작프로그램에 바로가기를 만듭니다.
-- 제거할 때는 자동 시작 선택을 해제하고 저장한 뒤 종료하고, 압축 해제한 폴더를 삭제합니다.
+- 설치판은 앱을 종료한 뒤 **Windows 설정 → 앱 → 설치된 앱 → NoMachine Hangul Bridge → 제거**를 사용합니다. 해당 설치판의 자동 시작 바로가기도 제거하며 사용자 키 설정은 남깁니다.
+- portable은 자동 시작 선택을 해제하고 저장한 뒤 종료하고 압축 해제한 폴더를 삭제합니다.
 - 설정도 제거하려면 `%LOCALAPPDATA%\NoMachineHangulBridge`를 삭제합니다.
 - 실행을 종료하면 재매핑이 해제됩니다. Mac 단축키는 도구가 변경하지 않습니다.
 
@@ -75,7 +90,7 @@ NoMachine 설정/대화상자를 피하기 위해 연결 파일 이름과 정확
 
 ## 지원과 알려진 제한
 
-- 실기 환경: G5 KC의 한영키 VK15/SC138, AutoHotkey 2.0.28, NoMachine Windows client 9.6.3 / Mac server 9.10.3, macOS 27.0.1.
+- 전달본에서 보고된 실기 환경: G5 KC의 한영키 VK15/SC138, AutoHotkey 2.0.28, NoMachine Windows client 9.6.3 / Mac server 9.10.3, macOS 27.0.1. 이번 변경의 Windows CI 검증과 별개입니다.
 - 검증된 출력은 `Control+Space`입니다. `Control+Option+Space`는 설정 선택지를 제공하지만 이 환경에서는 실기 검증하지 않았습니다.
 - Mac이 입력 소스 전환을 F19로 설정했다면 기본 출력과 맞지 않습니다. 이번 환경에서는 NoMachine의 F19 전달이 확인되지 않아 첫 버전 출력으로 제공하지 않습니다.
 - gksdud 등 다른 앱이 Mac 입력 소스 단축키를 변경하면 도구의 출력과 Mac 설정이 일치하는지 다시 확인하세요.
@@ -97,6 +112,7 @@ NoMachine 연결 로그는 읽기만 하며, 로그에 포함될 수 있는 인�
 ```text
 AutoHotkey64.exe /ErrorStdOut tests\SessionDetector.Tests.ahk
 AutoHotkey64.exe /ErrorStdOut tests\BridgeApp.Tests.ahk
+AutoHotkey64.exe /ErrorStdOut tests\Lifecycle.Tests.ahk
 AutoHotkey64.exe /ErrorStdOut Diagnose.ahk
 ```
 
@@ -105,5 +121,5 @@ AutoHotkey64.exe /ErrorStdOut Diagnose.ahk
 개발용 환경 변수 `NMHB_DEBUG=1`을 명시한 경우에만 사용자 설정 폴더에 누름/뗌/전송 시각의 진단 로그를 기록합니다. 입력한 문장은 기록하지 않습니다. 일반 실행에서는 꺼져 있습니다.
 실제 Windows/Linux 서버에 연결한 실기 검증은 별도로 필요합니다.
 
-소스는 MIT 라이선스입니다. AutoHotkey 런타임은 이 패키지에 포함하지 않으며 별도 라이선스를 따릅니다.
-향후 런타임이 포함된 EXE를 배포한다면 [AutoHotkey 라이선스](https://github.com/AutoHotkey/AutoHotkey/blob/v2.0/license.txt)의 배포 조건도 적용해야 합니다.
+소스는 MIT 라이선스입니다. 설치판과 portable에는 별도 라이선스의 AutoHotkey runtime을 포함합니다.
+`third-party/AutoHotkey/`의 원본 라이선스와 같은 버전 전체 소스 ZIP을 함께 배포하며 제거하지 마세요. [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md)에 구성과 출처를 기록했습니다.
