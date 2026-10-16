@@ -62,9 +62,13 @@ function Assert-Install([bool]$Condition, [string]$Label) {
 }
 function Start-Owned([string]$File, [string]$Arguments) {
     $taskLog = Join-Path $script:FixtureRoot ([guid]::NewGuid().ToString('N'))
+    if ($Arguments.StartsWith('/VERYSILENT')) {
+        $Arguments += ' /SP- /LOG="' + "$taskLog.install.log" + '"'
+    }
     $taskProcess = Start-Process -FilePath $File -ArgumentList $Arguments -PassThru -RedirectStandardOutput "$taskLog.out" -RedirectStandardError "$taskLog.err"
     $taskProcess | Add-Member NoteProperty OutputPath "$taskLog.out"
     $taskProcess | Add-Member NoteProperty ErrorPath "$taskLog.err"
+    $taskProcess | Add-Member NoteProperty InstallerLogPath "$taskLog.install.log"
     $script:taskOwnedProcesses.Add($taskProcess)
     return $taskProcess
 }
@@ -72,6 +76,12 @@ function Wait-Owned([Diagnostics.Process]$Process, [bool]$Success = $true) {
     $taskExited = $Process.WaitForExit(45000)
     Write-Output ([IO.File]::ReadAllText($Process.OutputPath) + [IO.File]::ReadAllText($Process.ErrorPath))
     if (!$taskExited) { throw 'An owned test process timed out.' }
+    if ($Success -and $Process.ExitCode -ne 0) {
+        Write-Output "Child exit code: $($Process.ExitCode)"
+        if (Test-Path $Process.InstallerLogPath) {
+            Get-Content -LiteralPath $Process.InstallerLogPath -Tail 25 | Write-Output
+        }
+    }
     if ($Success) { Assert-Install ($Process.ExitCode -eq 0) 'installer/worker exited successfully' }
     else { Assert-Install ($Process.ExitCode -ne 0) 'running app blocks installer or removal' }
 }
