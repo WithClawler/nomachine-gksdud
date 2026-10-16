@@ -1,11 +1,12 @@
-# NoMachine Hangul Bridge
+# nomachine-gksdud · NoMachine Hangul Bridge
 
 Windows 한영키로 NoMachine 원격 Mac의 입력 소스를 전환하는 작은 도구입니다.
+Mac 한영 전환 도구 [gksdud](https://github.com/codingnoye/gksdud)에서 영감을 받았습니다.
 독립 프로젝트이며 NoMachine 또는 gksdud의 공식 구성품이 아닙니다.
 
-**0.1.2-alpha · Windows용 · 소스 실행에는 AutoHotkey v2 필요**
+**0.1.3-alpha · Windows용 · 설치판과 portable에는 AutoHotkey runtime 포함**
 
-설치 파일/런타임 포함 ZIP의 자동 빌드 구성은 [BUILDING.md](BUILDING.md), 이어서 개발할 프롬프트는 [HANDOFF_PROMPT.md](HANDOFF_PROMPT.md)에 있습니다. 아직 실제 GitHub Actions나 설치 EXE 컴파일을 실행한 것은 아닙니다.
+설치 파일/런타임 포함 ZIP의 자동 빌드 구성은 [BUILDING.md](BUILDING.md), 실제 검사 결과와 남은 제한은 [VALIDATION.md](VALIDATION.md)에 있습니다.
 
 ## 동작
 

@@ -1,3 +1,5 @@
+#Include StartupLink.ahk
+
 class HangulBridge {
     __New(dataDir := "") {
         this.dataDir := dataDir != "" ? dataDir : EnvGet("LOCALAPPDATA") "\NoMachineHangulBridge"
@@ -26,7 +28,7 @@ class HangulBridge {
         this.downCallback := ObjBindMethod(this, "KeyDown")
         this.upCallback := ObjBindMethod(this, "KeyUp")
         this.refreshTimer := ObjBindMethod(this, "Refresh")
-        this.startupLink := A_Startup "\NoMachine Hangul Bridge.lnk"
+        this.startupLink := BridgeStartup.Path
     }
 
     Start(quiet := false) {
@@ -73,7 +75,7 @@ class HangulBridge {
 
     KeyDown(*) {
         this.Trace("DOWN armed=" this.armed)
-        if this.armed
+        if this.armed || !this.enabled || this.capturing || this.key = ""
             return
         target := this.detector.Current()
         if !target
@@ -95,6 +97,10 @@ class HangulBridge {
         }
         this.Trace("SEND")
         keys := this.output = "Control+Option+Space" ? "^!{Space}" : "^{Space}"
+        this.EmitSwitch(keys)
+    }
+
+    EmitSwitch(keys) {
         SendEvent(keys)
     }
 
@@ -137,7 +143,7 @@ class HangulBridge {
         this.window.AddText("xm y+12", "3. NoMachine 연결 로그 폴더")
         this.rootControl := this.window.AddEdit("w620", this.detector.logRoot)
         this.autoControl := this.window.AddCheckbox("xm y+14", "Windows 로그인 시 실행")
-        this.autoControl.Value := !!FileExist(this.startupLink)
+        this.autoControl.Value := !!BridgeStartup.Read(this.startupLink)
         this.window.AddText("xm w620", "자동 실행을 선택하지 않으면, PC 재부팅 후 Start.cmd로 다시 실행해야 합니다.")
         this.window.AddText("xm y+14", "연결 판별 상태 (약 1.5초마다 갱신)")
         this.statusControl := this.window.AddEdit("w620 r5 ReadOnly", "")
@@ -236,12 +242,7 @@ class HangulBridge {
         IniWrite(this.key, this.configFile, "Mapping", "Key")
         IniWrite(this.output, this.configFile, "Mapping", "Output")
         IniWrite(root, this.configFile, "Detection", "LogRoot")
-        if this.autoControl.Value {
-            args := '"' A_ScriptFullPath '" --quiet'
-            icon := FileExist(this.assetsDir "\bridge-waiting.ico") ? this.assetsDir "\bridge-waiting.ico" : A_AhkPath
-            FileCreateShortcut(A_AhkPath, this.startupLink, A_ScriptDir, args, "NoMachine Hangul Bridge", icon)
-        } else if FileExist(this.startupLink)
-            FileDelete(this.startupLink)
+        BridgeStartup.Set(this.autoControl.Value, this.startupLink)
         this.Refresh()
         this.HideSettings()
     }

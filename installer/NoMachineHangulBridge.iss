@@ -25,7 +25,9 @@ OutputBaseFilename=NoMachineHangulBridge-{#AppVersion}-windows-x64-setup
 SetupIconFile={#StageDir}\assets\bridge-ready.ico
 UninstallDisplayIcon={app}\assets\bridge-ready.ico
 LicenseFile={#StageDir}\LICENSE
-CloseApplications=yes
+AppMutex=Local\NoMachineHangulBridge-3D80D846-ECBD-4C32-AE04-03D80C80F90B
+SetupMutex=Local\NoMachineHangulBridge-Setup-3D80D846
+CloseApplications=no
 RestartApplications=no
 
 [Tasks]
@@ -39,9 +41,10 @@ Name: "{autoprograms}\NoMachine Hangul Bridge"; Filename: "{app}\runtime\AutoHot
 Name: "{autodesktop}\NoMachine Hangul Bridge"; Filename: "{app}\runtime\AutoHotkey64.exe"; Parameters: """{app}\NoMachineHangulBridge.ahk"" --settings"; WorkingDir: "{app}"; IconFilename: "{app}\assets\bridge-ready.ico"; Tasks: desktopicon
 
 [Run]
+Filename: "{app}\runtime\AutoHotkey64.exe"; Parameters: """{app}\NoMachineHangulBridge.ahk"" --repair-startup"; Flags: runhidden waituntilterminated
 Filename: "{app}\runtime\AutoHotkey64.exe"; Parameters: """{app}\NoMachineHangulBridge.ahk"" --quiet"; Description: "Start NoMachine Hangul Bridge"; Flags: nowait postinstall skipifsilent
 
-[UninstallDelete]
-Type: files; Name: "{userstartup}\NoMachine Hangul Bridge.lnk"
+[UninstallRun]
+Filename: "{app}\runtime\AutoHotkey64.exe"; Parameters: """{app}\NoMachineHangulBridge.ahk"" --remove-startup"; Flags: runhidden waituntilterminated; RunOnceId: "RemoveOwnedStartupLink"
 ; Intentionally preserve %LOCALAPPDATA%\NoMachineHangulBridge\settings.ini.
 ; No per-user key registration or profile is installed over an existing profile.

@@ -50,15 +50,20 @@ $taskRuntimeDir = Join-Path $taskBuildRoot ('runtime-' + [Guid]::NewGuid().ToStr
 $taskRuntimeExe = Join-Path $taskRuntimeDir 'AutoHotkey64.exe'
 if (!(Test-Path -LiteralPath $taskRuntimeExe)) { throw 'Official x64 runtime missing from archive.' }
 
-foreach ($taskTest in @('SessionDetector.Tests.ahk', 'BridgeApp.Tests.ahk')) {
+foreach ($taskTest in @('BridgeApp.Tests.ahk', 'SessionDetector.Tests.ahk', 'Lifecycle.Tests.ahk')) {
     $taskTestPath = Join-Path $ProjectRoot "tests\$taskTest"
     $taskOut = Join-Path $taskBuildRoot "$taskTest.out"
     $taskErr = Join-Path $taskBuildRoot "$taskTest.err"
-    $taskProcess = Start-Process -FilePath $taskRuntimeExe -ArgumentList ('/ErrorStdOut "' + $taskTestPath + '"') -WindowStyle Hidden -PassThru -Wait -RedirectStandardOutput $taskOut -RedirectStandardError $taskErr
+    $taskProcess = Start-Process -FilePath $taskRuntimeExe -ArgumentList ('/ErrorStdOut "' + $taskTestPath + '"') -WindowStyle Hidden -PassThru -RedirectStandardOutput $taskOut -RedirectStandardError $taskErr
+    if (!$taskProcess.WaitForExit(60000)) {
+        $taskProcess.Kill()
+        throw "Test timed out: $taskTest"
+    }
     $taskText = [IO.File]::ReadAllText($taskOut) + [IO.File]::ReadAllText($taskErr)
     Write-Output $taskText
     if ($taskProcess.ExitCode -ne 0 -or $taskText -notmatch 'PASS \d+') { throw "Tests failed: $taskTest" }
 }
+& (Join-Path $ProjectRoot 'tests\Process.Tests.ps1') -Runtime $taskRuntimeExe -ProjectRoot $ProjectRoot
 
 $taskStage = Join-Path $taskBuildRoot ('stage-' + [Guid]::NewGuid().ToString('N'))
 [IO.Directory]::CreateDirectory($taskStage) | Out-Null
