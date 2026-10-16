@@ -87,7 +87,8 @@ try {
     $taskApp = Join-Path $env:LOCALAPPDATA 'Programs\NoMachineHangulBridge'
     $taskProfile = Join-Path $env:LOCALAPPDATA 'NoMachineHangulBridge'
     $taskSettings = Join-Path $taskProfile 'settings.ini'
-    $taskStartup = Join-Path ([Environment]::GetFolderPath('Startup')) 'NoMachine Hangul Bridge.lnk'
+    $taskStartupDir = [Environment]::GetFolderPath([Environment+SpecialFolder]::Startup, [Environment+SpecialFolderOption]::Create)
+    $taskStartup = Join-Path $taskStartupDir 'NoMachine Hangul Bridge.lnk'
     Assert-Install (!(Test-Path $taskApp) -and !(Test-Path $taskProfile)) 'isolated account starts clean'
     Wait-Owned (Start-Owned (Join-Path $FixtureRoot 'previous.exe') '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART')
     $taskRuntime = Join-Path $taskApp 'runtime\AutoHotkey64.exe'

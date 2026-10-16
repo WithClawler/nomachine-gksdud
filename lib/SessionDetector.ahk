@@ -62,7 +62,7 @@ class NxEvidence {
             return result
         }
         state := this.LastMatch(sessionText, "im)^Session:\s+Session\s+(started|resumed|terminated|closed|suspended|suspending|resuming|failed|disconnected)\b")
-        if !state || !RegExMatch(state[1], "i)^(started|resumed)$") {
+        if !state || state.Pos < start.Pos || !RegExMatch(state[1], "i)^(started|resumed)$") {
             result.reason := "desktop-not-running"
             return result
         }
@@ -79,6 +79,9 @@ class NxEvidence {
         }
         result.ok := true
         result.reason := "live-mac-evidence"
+        ; Offsets distinguish a resume/reconnect appended to the same log folder.
+        ; The value stays in memory and is never written to diagnostics.
+        result.generation := start.Pos "|" state.Pos "|" banner.Pos "|" agent.Pos
         return result
     }
 
@@ -145,9 +148,13 @@ class NxDetector {
                     record.ok := selected.evidence.ok
                     record.reason := selected.evidence.reason
                     record.platform := selected.evidence.platform
+                    if record.ok
+                        record.generation := selected.evidence.generation
                 } else if matches.Length > 1
                     record.reason := "ambiguous-session-logs"
                 record.token := created "|" path "|" record.folder
+                if record.ok
+                    record.token .= "|" record.generation
                 next[pid] := record
             }
         } catch {
@@ -191,7 +198,7 @@ class NxDetector {
                 NxDetector.ReadBounded(record.folder "\connection"),
                 NxDetector.ReadBounded(record.folder "\session"),
                 record.pid, record.created, record.path)
-            return evidence.ok
+            return evidence.ok && evidence.generation = record.generation
         }
         return false
     }

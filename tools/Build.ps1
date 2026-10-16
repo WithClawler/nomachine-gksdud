@@ -9,10 +9,13 @@ $ProjectRoot = [IO.Path]::GetFullPath($ProjectRoot)
 $taskVersion = [IO.File]::ReadAllText((Join-Path $ProjectRoot 'VERSION')).Trim()
 if ($taskVersion -notmatch '^\d+\.\d+\.\d+(?:-[A-Za-z0-9.-]+)?$') { throw 'Invalid VERSION.' }
 $taskDeps = [IO.File]::ReadAllText((Join-Path $ProjectRoot 'build-dependencies.json')) | ConvertFrom-Json
+$taskManifest = Get-Content -LiteralPath (Join-Path $ProjectRoot 'distribution-files.json') -Raw | ConvertFrom-Json
 $taskBuildRoot = Join-Path $ProjectRoot 'build'
 $taskDist = Join-Path $ProjectRoot 'dist'
 [IO.Directory]::CreateDirectory($taskBuildRoot) | Out-Null
 [IO.Directory]::CreateDirectory($taskDist) | Out-Null
+# Only discard this tool's old generated packages. Unexpected files fail inspection.
+Get-ChildItem -LiteralPath $taskDist -File | Where-Object { $_.Name -match '^NoMachineHangulBridge-.+\.(zip|exe)$|^SHA256SUMS\.txt$' } | Remove-Item
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 
 function Get-TaskHash([string]$Path) {
@@ -38,6 +41,27 @@ function New-TaskZip([string]$Folder, [string]$Path) {
             [IO.Compression.ZipFileExtensions]::CreateEntryFromFile($taskZip, $taskFile.FullName, $taskRelative, [IO.Compression.CompressionLevel]::Optimal) | Out-Null
         }
     } finally { $taskZip.Dispose(); $taskStream.Dispose() }
+}
+
+function Copy-ManifestFiles([string[]]$Paths, [string]$Destination) {
+    $taskSeen = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+    foreach ($taskRelative in $Paths) {
+        if (!$taskSeen.Add($taskRelative) -or $taskRelative -match '(^/|\\|:|(^|/)\.\.(/|$)|(^|/)(\.git|\.nx|\.ssh)(/|$)|\.(ini|nxs|lnk|key|pem|log)$)') {
+            throw "Unsafe or duplicate manifest path: $taskRelative"
+        }
+        $taskInput = Join-Path $ProjectRoot $taskRelative
+        $taskItem = Get-Item -LiteralPath $taskInput
+        if ($taskItem.PSIsContainer) { throw 'Manifest entries must be files.' }
+        $taskCheck = $taskItem
+        while ($taskCheck.FullName -ne $ProjectRoot) {
+            if ($taskCheck.Attributes -band [IO.FileAttributes]::ReparsePoint) { throw 'Reparse points are not distributable.' }
+            $taskCheck = if ($taskCheck -is [IO.FileInfo]) { $taskCheck.Directory } else { $taskCheck.Parent }
+            if (!$taskCheck) { throw 'Manifest path escaped the project.' }
+        }
+        $taskOutput = Join-Path $Destination $taskRelative
+        [IO.Directory]::CreateDirectory((Split-Path -Parent $taskOutput)) | Out-Null
+        Copy-Item -LiteralPath $taskInput -Destination $taskOutput
+    }
 }
 
 $taskAhk = $taskDeps.autohotkey
@@ -67,12 +91,7 @@ foreach ($taskTest in @('BridgeApp.Tests.ahk', 'SessionDetector.Tests.ahk', 'Lif
 
 $taskStage = Join-Path $taskBuildRoot ('stage-' + [Guid]::NewGuid().ToString('N'))
 [IO.Directory]::CreateDirectory($taskStage) | Out-Null
-foreach ($taskFile in @('NoMachineHangulBridge.ahk','Diagnose.ahk','Start.cmd','VERSION','README.md','LICENSE','THIRD-PARTY-NOTICES.md','build-dependencies.json')) {
-    Copy-Item -LiteralPath (Join-Path $ProjectRoot $taskFile) -Destination $taskStage
-}
-foreach ($taskFolder in @('lib','assets')) {
-    Copy-Item -LiteralPath (Join-Path $ProjectRoot $taskFolder) -Destination $taskStage -Recurse
-}
+Copy-ManifestFiles $taskManifest.portable $taskStage
 [IO.Directory]::CreateDirectory((Join-Path $taskStage 'runtime')) | Out-Null
 Copy-Item -LiteralPath $taskRuntimeExe -Destination (Join-Path $taskStage 'runtime\AutoHotkey64.exe')
 $taskNotices = Join-Path $taskStage 'third-party\AutoHotkey'
@@ -91,15 +110,11 @@ if (!$SkipInstaller) {
 # Allowlist the source handoff; never package user profiles, NoMachine logs or keys.
 $taskSourceStage = Join-Path $taskBuildRoot ('source-' + [Guid]::NewGuid().ToString('N'))
 [IO.Directory]::CreateDirectory($taskSourceStage) | Out-Null
-foreach ($taskFile in @('.gitignore','NoMachineHangulBridge.ahk','Diagnose.ahk','Start.cmd','VERSION','README.md','LICENSE','THIRD-PARTY-NOTICES.md','build-dependencies.json','CHANGELOG.md','VALIDATION.md','BUILDING.md','HANDOFF_PROMPT.md')) {
-    Copy-Item -LiteralPath (Join-Path $ProjectRoot $taskFile) -Destination $taskSourceStage
-}
-foreach ($taskFolder in @('.github','lib','assets','tools','installer','tests')) {
-    Copy-Item -LiteralPath (Join-Path $ProjectRoot $taskFolder) -Destination $taskSourceStage -Recurse
-}
+Copy-ManifestFiles $taskManifest.source $taskSourceStage
 New-TaskZip $taskSourceStage (Join-Path $taskDist "NoMachineHangulBridge-$taskVersion-source.zip")
 $taskSums = foreach ($taskFile in Get-ChildItem -LiteralPath $taskDist -File | Where-Object { $_.Name -like "NoMachineHangulBridge-$taskVersion-*" }) {
     (Get-TaskHash $taskFile.FullName) + ' *' + $taskFile.Name
 }
 [IO.File]::WriteAllLines((Join-Path $taskDist 'SHA256SUMS.txt'), [string[]]$taskSums, (New-Object Text.UTF8Encoding($false)))
+& (Join-Path $ProjectRoot 'tools\Test-Packages.ps1') -ProjectRoot $ProjectRoot -SkipInstaller:$SkipInstaller
 Write-Output "Build completed: $taskDist"
