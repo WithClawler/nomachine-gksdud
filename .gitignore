@@ -8,6 +8,7 @@ settings.ini
 .nx/
 ssh/
 work/
+outputs/
 dist/
 build/
 .DS_Store

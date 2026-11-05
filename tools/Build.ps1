@@ -74,6 +74,7 @@ $taskRuntimeDir = Join-Path $taskBuildRoot ('runtime-' + [Guid]::NewGuid().ToStr
 $taskRuntimeExe = Join-Path $taskRuntimeDir 'AutoHotkey64.exe'
 if (!(Test-Path -LiteralPath $taskRuntimeExe)) { throw 'Official x64 runtime missing from archive.' }
 
+& (Join-Path $ProjectRoot 'tools\BuildIcons.ps1') -ProjectRoot $ProjectRoot
 foreach ($taskTest in @('BridgeApp.Tests.ahk', 'SessionDetector.Tests.ahk', 'Lifecycle.Tests.ahk')) {
     $taskTestPath = Join-Path $ProjectRoot "tests\$taskTest"
     $taskOut = Join-Path $taskBuildRoot "$taskTest.out"

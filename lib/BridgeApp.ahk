@@ -1,4 +1,5 @@
 #Include StartupLink.ahk
+#Include SettingsView.ahk
 
 class HangulBridge {
     __New(dataDir := "") {
@@ -18,10 +19,11 @@ class HangulBridge {
         this.capturing := false
         this.registeredKey := ""
         this.window := false
-        this.assetsDir := A_ScriptDir "\assets"
+        SplitPath(A_LineFile, , &sourceDir)
+        this.assetsDir := sourceDir "\..\assets"
         this.trayReady := false
         this.lastTrayState := ""
-        this.hiddenNoticeShown := false
+        this.hiddenNoticeShown := IniRead(this.configFile, "Interface", "TrayNoticeShown", "0") = "1"
         this.pendingKey := this.key
         this.downCondition := (*) => this.CanMap()
         this.upCondition := (*) => this.armed || this.CanMap()
@@ -45,7 +47,7 @@ class HangulBridge {
         this.UpdateStatus()
         SetTimer(this.refreshTimer, 1500)
         notice := this.key = "" ? "처음 한 번만 한영키를 등록해 주세요." : "저장된 한영키 설정을 자동으로 불러왔습니다."
-        TrayTip(notice "`n알림 영역의 ‘한’ 아이콘에서 상태와 설정을 확인하세요.", "NoMachine Hangul Bridge", 1)
+        TrayTip(notice "`n알림 영역의 ‘!한’ 아이콘에서 상태와 설정을 확인하세요.", "NoMachine Hangul Bridge", 1)
         if !quiet || this.key = ""
             this.ShowSettings()
     }
@@ -111,10 +113,11 @@ class HangulBridge {
 
     TogglePause() {
         this.enabled := !this.enabled
-        if this.enabled {
-            A_TrayMenu.Uncheck("일시 중지")
-        } else {
-            A_TrayMenu.Check("일시 중지")
+        if this.trayReady {
+            if this.enabled
+                A_TrayMenu.Uncheck("일시 중지")
+            else
+                A_TrayMenu.Check("일시 중지")
         }
         this.UpdateStatus()
     }
@@ -129,46 +132,38 @@ class HangulBridge {
             this.window.Show(visible ? "" : "Hide")
             return
         }
-        this.window := Gui(, "NoMachine Hangul Bridge")
-        this.window.SetFont("s10", "Segoe UI")
-        this.runLabel := this.window.AddText("w620", "")
-        this.runLabel.SetFont("s13 Bold")
-        this.window.AddText("xm y+8 w620", "이 프로그램은 현재 Windows에서 실행됩니다. 알림 영역의 ‘한’ 아이콘으로 확인하세요.`n현재 연결 로그에서 Mac으로 확인된 NoMachine 창에만 적용합니다.")
-        this.window.AddText("xm y+16", "1. 전환에 사용할 한영키")
-        this.keyLabel := this.window.AddText("w420", this.key = "" ? "아직 등록하지 않았습니다." : this.key " (저장된 키 · 재등록 불필요)")
-        this.window.AddButton("x+8 yp-4 w170", "한영키 감지 / 변경").OnEvent("Click", ObjBindMethod(this, "BeginCapture"))
-        this.window.AddText("xm y+16", "2. Mac에 설정된 입력 소스 전환 단축키")
-        this.outputControl := this.window.AddDropDownList("w280 Choose" (this.output = "Control+Space" ? 1 : 2), ["Control+Space", "Control+Option+Space"])
-        this.window.AddText("xm w620", "Mac의 시스템 설정 → 키보드 → 키보드 단축키 → 입력 소스와 맞춰 주세요.")
-        this.window.AddText("xm y+12", "3. NoMachine 연결 로그 폴더")
-        this.rootControl := this.window.AddEdit("w620", this.detector.logRoot)
-        this.autoControl := this.window.AddCheckbox("xm y+14", "Windows 로그인 시 실행")
-        this.autoControl.Value := !!BridgeStartup.Read(this.startupLink)
-        this.window.AddText("xm w620", "자동 실행을 선택하지 않으면, PC 재부팅 후 Start.cmd로 다시 실행해야 합니다.")
-        this.window.AddText("xm y+14", "연결 판별 상태 (약 1.5초마다 갱신)")
-        this.statusControl := this.window.AddEdit("w620 r5 ReadOnly", "")
-        this.window.AddButton("xm y+14 w150 Default", "저장 후 창 닫기").OnEvent("Click", ObjBindMethod(this, "SaveSettings"))
-        this.window.AddButton("x+10 w140", "일시 중지 / 재개").OnEvent("Click", (*) => this.TogglePause())
-        this.window.AddButton("x+10 w110", "종료").OnEvent("Click", (*) => ExitApp())
-        this.window.AddText("xm y+12 w620", "gksdud 및 SSH 설치가 필요 없습니다. 원격 OS를 확인할 수 없으면 매핑하지 않습니다.`n창을 닫아도 알림 영역에서 계속 실행됩니다. 종료하려면 ‘종료’를 선택하세요.")
-        this.window.OnEvent("Close", (*) => this.HideSettings())
+        this.settingsView := BridgeSettingsView(this)
+        this.window := this.settingsView.window
         this.UpdateStatus()
-        this.window.Show(visible ? "" : "Hide")
+        this.window.Show((visible ? "" : "Hide ") "w680 h648")
     }
 
     HideSettings() {
         this.CancelCapture()
+        this.settingsView.details.Hide()
         this.window.Hide()
         if !this.hiddenNoticeShown {
+            ; Persist before notifying: restarting or moving the app must not repeat it.
+            DirCreate(this.dataDir)
+            IniWrite("1", this.configFile, "Interface", "TrayNoticeShown")
             this.hiddenNoticeShown := true
-            TrayTip("설정 창을 닫아도 알림 영역의 ‘한’ 아이콘에 남습니다.`n완전히 종료하려면 아이콘 우클릭 → 종료를 선택하세요.", "NoMachine Hangul Bridge", 1)
+            this.NotifyHidden()
         }
+    }
+
+    NotifyHidden() {
+        TrayTip("알림 영역에서 계속 실행 중입니다.`n‘!한’ 아이콘을 두 번 클릭하면 설정을 열 수 있습니다.", "NoMachine Hangul Bridge", 1)
+    }
+
+    KeyDescription() {
+        return this.key = "" ? "아직 등록한 키가 없습니다.`n아래 버튼을 눌러 시작하세요." : "등록됨 · " this.key "`n다음 실행에도 자동으로 불러옵니다."
     }
 
     BeginCapture(*) {
         this.CancelCapture()
         this.capturing := true
-        this.keyLabel.Text := "이 창에서 한영키를 한 번 누르세요. (8초, Esc 취소)"
+        this.keyLabel.Text := "한영키를 한 번 누르세요.`n8초 안에 감지 · Esc로 취소"
+        this.UpdateStatus()
         ; Visible, bounded learning: no global suppression and no keystroke log.
         this.captureHook := InputHook("V L0 T8")
         this.captureHook.KeyOpt("{All}", "N")
@@ -192,7 +187,7 @@ class HangulBridge {
         this.capturing := false
         hook.Stop()
         this.RememberKey(measuredKey)
-        this.keyLabel.Text := this.key " (등록·저장 완료 · 다음 실행에 자동 복원)"
+        this.keyLabel.Text := this.KeyDescription()
         this.UpdateStatus()
     }
 
@@ -211,7 +206,8 @@ class HangulBridge {
     CaptureEnd(*) {
         if this.capturing {
             this.capturing := false
-            this.keyLabel.Text := this.pendingKey = "" ? "감지가 끝났습니다. 다시 시도하세요." : this.pendingKey
+            this.keyLabel.Text := "감지 시간이 지났습니다.`n아래 버튼으로 다시 시도하세요."
+            this.UpdateStatus()
         }
     }
 
@@ -220,7 +216,8 @@ class HangulBridge {
             return
         this.capturing := false
         this.captureHook.Stop()
-        this.keyLabel.Text := this.pendingKey = "" ? "아직 등록하지 않았습니다." : this.pendingKey
+        this.keyLabel.Text := this.KeyDescription()
+        this.UpdateStatus()
     }
 
     SaveSettings(*) {
@@ -251,14 +248,41 @@ class HangulBridge {
         if !this.enabled
             return {id: "paused", label: "일시 중지됨", color: "64748B", icon: "paused"}
         if this.capturing
-            return {id: "learning", label: "실행 중 · 한영키 등록 중", color: "2563EB", icon: "waiting"}
+            return {id: "learning", label: "한영키 감지 중", color: "2563EB", icon: "waiting"}
         if this.key = ""
-            return {id: "unconfigured", label: "실행 중 · 한영키 등록 필요", color: "2563EB", icon: "waiting"}
+            return {id: "unconfigured", label: "한영키를 등록해 주세요", color: "2563EB", icon: "waiting"}
         for pid, record in this.detector.records {
             if record.ok
-                return {id: "ready", label: "실행 중 · Mac 연결 확인됨", color: "0F766E", icon: "ready"}
+                return {id: "ready", label: "Mac 연결 준비 완료", color: "0F766E", icon: "ready"}
         }
-        return {id: "waiting", label: "실행 중 · Mac 연결 대기", color: "2563EB", icon: "waiting"}
+        return {id: "waiting", label: "Mac 연결 대기 중", color: "2563EB", icon: "waiting"}
+    }
+
+    StateDescription(state) {
+        if state.id = "paused"
+            return "한영키 전환을 잠시 멈췄습니다. ‘다시 시작’을 누르면 재개합니다."
+        if state.id = "learning"
+            return "현재 설정 창에서 전환에 사용할 한영키를 한 번 눌러 주세요."
+        if state.id = "unconfigured"
+            return "한 번만 등록하면 다음 실행부터 저장된 키를 자동으로 불러옵니다."
+        if this.detector.error != ""
+            return "연결 정보를 읽지 못했습니다. 연결 설정에서 자세한 상태를 확인하세요."
+        if state.id = "ready"
+            return "확인된 Mac 연결 창에서 한영키를 누르면 입력 소스를 전환합니다."
+        return "NoMachine에서 Mac에 연결하면 자동으로 준비됩니다."
+    }
+
+    static ReasonDescription(reason) {
+        switch reason {
+            case "unrecognized-log": return "연결 로그 형식을 확인할 수 없습니다."
+            case "process-not-linked", "invalid-process-time", "stale-or-other-process": return "현재 연결과 일치하는 로그를 확인하지 못했습니다."
+            case "desktop-not-running": return "원격 데스크톱이 실행 중이 아닙니다."
+            case "platform-not-confirmed": return "원격 운영체제를 아직 확인하지 못했습니다."
+            case "non-mac-desktop": return "Mac 데스크톱으로 확인되지 않아 기본 키 동작을 유지합니다."
+            case "no-current-session-log": return "현재 연결 로그를 찾지 못했습니다."
+            case "ambiguous-session-logs": return "일치하는 연결 로그가 여러 개입니다."
+            default: return "연결을 확인하지 못해 기본 키 동작을 유지합니다."
+        }
     }
 
     UpdateTray(state) {
@@ -278,18 +302,22 @@ class HangulBridge {
         this.UpdateTray(state)
         if !this.window
             return
+        this.settingsView.UpdateState(state)
         this.runLabel.Text := state.label
         this.runLabel.SetFont("c" state.color)
+        this.stateDetail.Text := this.StateDescription(state)
+        this.pauseControl.Text := this.enabled ? "일시 중지" : "다시 시작"
         status := this.enabled ? "실행 중" : "일시 중지됨"
         status .= this.key = "" ? " / 한영키 미등록" : " / " this.key
         for pid, record in this.detector.records {
-            status .= "`r`n" record.title " / " record.platform
-            status .= record.ok ? " / Mac 판별 완료" : " / 적용 안 함: " record.reason
+            platform := record.platform = "Unknown" ? "운영체제 확인 중" : record.platform
+            status .= "`r`n" record.title " · " platform
+            status .= record.ok ? " · Mac 연결 확인됨" : "`r`n" HangulBridge.ReasonDescription(record.reason)
         }
         if this.detector.records.Count = 0
-            status .= "`r`n실행 중인 연결 프로세스를 찾지 못했습니다."
+            status .= "`r`nNoMachine 연결을 기다리고 있습니다."
         if this.detector.error != ""
-            status .= "`r`n" this.detector.error
+            status .= "`r`n연결 정보를 읽지 못했습니다. NoMachine 실행 상태를 확인해 주세요."
         this.statusControl.Value := status
     }
 }

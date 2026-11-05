@@ -5,18 +5,21 @@
 
 ## GitHub Actions
 
-- main/master push, PR, 수동 실행: AHK·프로세스 검사, 설치 EXE·portable·소스 ZIP·SHA256SUMS 생성, 비관리자 설치 검사.
-- `VERSION`과 같은 `v` 태그 push: 검사를 통과한 네 파일을 **초안 Release**에 첨부합니다. 이미 공개된 릴리스 파일은 덮어쓰지 않습니다.
-- alpha 태그는 prerelease로 표시합니다. 첨부 파일과 체크섬 확인 후 초안을 공개합니다.
-- 일반 빌드 결과는 `Windows packages` 실행의 `windows-distribution` 아티팩트에서 내려받습니다.
+- Windows 빌드는 `v` 태그 push와 수동 실행에서만 수행합니다. 일반 브랜치 push와 PR에서는 실행하지 않습니다.
+- AHK·프로세스 검사 후 설치 EXE·portable·소스 ZIP·SHA256SUMS를 생성합니다. 비관리자 설치 검사는 릴리스 태그에서 필수이며, 수동 실행에서는 `install_checks` 옵션으로 선택합니다.
+- `VERSION`과 같은 `v` 태그 push: 검사를 통과한 설치 EXE·portable ZIP·소스 ZIP·SHA256 파일을 릴리스에 업로드합니다. 업로드된 네 파일을 다시 내려받아 원본과 비교한 뒤 **자동으로 공개**합니다. 이미 공개된 릴리스 파일은 덮어쓰지 않습니다.
+- alpha 태그는 prerelease로 표시합니다. 릴리스 설명은 해당 버전의 CHANGELOG에서 만들고 설치형·portable 다운로드 링크를 포함합니다.
+- 일반 빌드 결과는 `Windows packages` 실행의 `windows-x64-installer`와 `windows-x64-portable` 아티팩트에서 각각 내려받습니다. `windows-distribution`에는 소스와 체크섬까지 모두 포함됩니다.
 - 태그 릴리스 작업만 기본 `GITHUB_TOKEN`의 `contents:write`를 사용합니다. 앱에는 GitHub 토큰이나 SSH 자격 증명이 필요 없습니다.
 
 Action 버전은 commit SHA로 고정했습니다. AutoHotkey 런타임과 원본 소스는 `build-dependencies.json`의 공식 URL·버전·SHA256을 사용합니다.
-Inno Setup은 `windows-2022` runner에 제공되는 6.x를 사용하며 정확한 컴파일러 버전은 각 빌드 로그에 남습니다.
+Inno Setup은 `windows-2022` runner에 제공되는 6.x를 사용하며 컴파일러 위치·버전을 먼저 확인합니다. 컴파일러가 없으면 빌드가 실패하며 설치형 생성을 생략하지 않습니다.
 
 ## 로컬 빌드
 
 Windows x64, PowerShell, Inno Setup 6의 `ISCC.exe`가 필요합니다.
+
+아이콘은 `assets/bridge-icon.svg`의 `!한` 타일형을 원본으로 사용합니다. 빌드는 `tools/BuildIcons.ps1`로 상태별 ICO와 설정 화면용 PNG를 먼저 생성하며 별도 한글 폰트 설치가 필요하지 않습니다. Mac 연결은 청록, 대기·키 등록은 파랑, 일시 중지는 회색입니다.
 
 ```powershell
 ./tools/Build.ps1

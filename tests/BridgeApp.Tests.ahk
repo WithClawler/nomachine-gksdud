@@ -7,6 +7,12 @@ FailError(error, *) {
     ExitApp(1)
 }
 tests := 0
+class NoticeBridge extends HangulBridge {
+    notices := 0
+    NotifyHidden() {
+        this.notices += 1
+    }
+}
 Assert(condition, label) {
     global tests
     if !condition {
@@ -14,6 +20,20 @@ Assert(condition, label) {
         ExitApp(1)
     }
     tests += 1
+}
+PictureBackgroundColor(control) {
+    bitmap := SendMessage(0x173, 0, 0, control.Hwnd) ; STM_GETIMAGE / IMAGE_BITMAP
+    info := Buffer(32, 0)
+    if !bitmap || !DllCall("GetObjectW", "ptr", bitmap, "int", info.Size, "ptr", info)
+        throw Error("Settings logo bitmap is unavailable")
+    width := NumGet(info, 4, "int"), height := NumGet(info, 8, "int")
+    dc := DllCall("CreateCompatibleDC", "ptr", 0, "ptr")
+    old := DllCall("SelectObject", "ptr", dc, "ptr", bitmap, "ptr")
+    try return DllCall("GetPixel", "ptr", dc, "int", Round(width * 0.1), "int", Round(height * 0.5), "uint")
+    finally {
+        DllCall("SelectObject", "ptr", dc, "ptr", old)
+        DllCall("DeleteDC", "ptr", dc)
+    }
 }
 taskDir := A_Temp "\nmhb-tests-" DllCall("GetCurrentProcessId")
 startupExisted := !!FileExist(A_Startup "\NoMachine Hangul Bridge.lnk")
@@ -44,7 +64,42 @@ try {
     Assert(!DllCall("IsWindowVisible", "ptr", bridge.window.Hwnd), "test GUI stays hidden")
     Assert(bridge.outputControl.Text = "Control+Space", "shortcut dropdown initialized")
     Assert(bridge.rootControl.Value = EnvGet("USERPROFILE") "\.nx", "portable log folder default")
+    Assert(!DllCall("IsWindowVisible", "ptr", bridge.settingsView.details.Hwnd), "advanced settings stay out of the primary screen")
+    Assert(bridge.stateDetail.Text != "", "status includes a plain language next step")
+    Assert(PictureBackgroundColor(bridge.settingsView.logo) = BridgeSettingsView.Color(bridge.RunState().color), "registration logo matches blue status color")
+    defaultId := SendMessage(0x400, 0, 0, bridge.window.Hwnd) ; DM_GETDEFID
+    Assert((defaultId & 0xFFFF) = DllCall("GetDlgCtrlID", "ptr", bridge.saveControl.Hwnd), "save remains the native default button")
+    bridge.TogglePause()
+    Assert(bridge.pauseControl.Text = "다시 시작", "pause action changes to resume")
+    Assert(PictureBackgroundColor(bridge.settingsView.logo) = BridgeSettingsView.Color(bridge.RunState().color), "paused logo matches gray status color")
+    bridge.TogglePause()
+    Assert(bridge.pauseControl.Text = "일시 중지", "resume action changes to pause")
+    bridge.capturing := true
+    bridge.UpdateStatus()
+    Assert(bridge.runLabel.Text = "한영키 감지 중", "capture status updates immediately")
+    bridge.capturing := false
+    bridge.key := "vk15sc138"
+    bridge.detector.records := Map(1, {ok: true, title: "Test desktop", platform: "macOS", reason: "live-mac-evidence"})
+    bridge.UpdateStatus()
+    Assert(PictureBackgroundColor(bridge.settingsView.logo) = BridgeSettingsView.Color(bridge.RunState().color), "ready logo matches teal status color")
+    bridge.detector.records := Map()
+    bridge.settingsView.details.Destroy()
     bridge.window.Destroy()
+    noticeApp := NoticeBridge(taskDir)
+    noticeApp.ShowSettings(false)
+    noticeApp.HideSettings()
+    noticeApp.HideSettings()
+    Assert(noticeApp.notices = 1, "closing repeatedly shows one tray notice")
+    Assert(IniRead(taskDir "\settings.ini", "Interface", "TrayNoticeShown") = "1", "tray notice is recorded in the user profile")
+    noticeApp.settingsView.details.Destroy()
+    noticeApp.window.Destroy()
+    noticeReload := NoticeBridge(taskDir)
+    noticeReload.ShowSettings(false)
+    noticeReload.HideSettings()
+    Assert(noticeReload.notices = 0, "restarting does not repeat the tray notice")
+    Assert(IniRead(taskDir "\settings.ini", "Mapping", "Key") = "", "notice does not rewrite mapping settings")
+    noticeReload.settingsView.details.Destroy()
+    noticeReload.window.Destroy()
     IniWrite("vk15sc138", taskDir "\settings.ini", "Mapping", "Key")
     IniWrite("invalid shortcut", taskDir "\settings.ini", "Mapping", "Output")
     bridge := HangulBridge(taskDir)
@@ -68,9 +123,11 @@ try {
     Assert(!!FileExist(bridge.startupLink) = startupExisted, "tests do not alter startup")
     for state in ["ready", "waiting", "paused"] {
         iconPath := A_ScriptDir "\..\assets\bridge-" state ".ico"
-        iconHandle := DllCall("LoadImageW", "ptr", 0, "str", iconPath, "uint", 1, "int", 16, "int", 16, "uint", 0x10, "ptr")
-        Assert(iconHandle != 0, state " tray icon loads through Windows")
-        DllCall("DestroyIcon", "ptr", iconHandle)
+        for size in [16, 20, 24, 32, 40, 48, 64, 128, 256] {
+            iconHandle := DllCall("LoadImageW", "ptr", 0, "str", iconPath, "uint", 1, "int", size, "int", size, "uint", 0x10, "ptr")
+            Assert(iconHandle != 0, state " tray icon loads through Windows at " size "px")
+            DllCall("DestroyIcon", "ptr", iconHandle)
+        }
     }
 } finally {
     ; Remove only the exact new directory created by this test.

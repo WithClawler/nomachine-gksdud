@@ -1,8 +1,20 @@
 # 검증 기록 — 2026-10-16
 
-대상: **0.1.3-alpha**, 공개 저장소 [WithClawler/nomachine-gksdud](https://github.com/WithClawler/nomachine-gksdud).
+대상: **0.1.4-alpha**, 공개 저장소 [WithClawler/nomachine-gksdud](https://github.com/WithClawler/nomachine-gksdud).
 
-## 이번 작업에서 직접 확인한 검사
+## 설정 화면 및 최초 닫기 안내 변경 — 로컬 Windows 검사
+
+아래는 `C:\Works\nomachine-gksdud`에서 수행한 0.1.4-alpha UI 변경의 로컬 검사이며, 기존 0.1.3-alpha 릴리스의 CI 결과와 구분한다.
+
+- PowerShell 7에서 `tools/Build.ps1 -SkipInstaller`로 AutoHotkey 2.0.28의 고정 해시를 확인하고 테스트 및 portable·소스 ZIP 생성을 검사했다.
+- 설정 화면·키 저장·최초 안내·아이콘 63개, 연결 판별 33개, 지연 전송·단일 실행·자동 시작 링크 24개, 별도 프로세스 12개 검사 통과.
+- 닫기 안내는 사용자 설정의 `[Interface] TrayNoticeShown=1`에 보존된다. 같은 창의 반복 닫기, 프로세스 재실행, 다른 앱 폴더에서의 재실행 모두 추가 안내가 없음을 검사했다. 테스트에서는 알림 호출을 관찰 객체로 대체했으며 실제 Windows 토스트 표시 여부를 검증한 것은 아니다.
+- 기본 창과 연결 상세 창을 합성 프로필·합성 연결 상태로 생성해 Windows 125% 배율에서 렌더링했다. 최초 등록·Mac 연결 대기·준비·일시 중지 상태, 버튼과 문구의 배치를 확인했다. 사용자 화면을 점유하거나 실제 키를 전송하지 않았다.
+- 채택한 B `!한` 타일형을 폰트 없는 SVG 원본으로 정리했다. 청록·파랑·회색 ICO의 16·20·24·32·40·48·64·128·256px를 Windows 로더로 검사했다. 설정 창의 실제 로고 비트맵 색상이 미등록·준비·일시 중지 상태 색상과 일치하는지도 검사했다.
+- 트레이와 설정 창 로고·상태 카드가 같은 상태 색상을 사용한다. 빌드가 SVG에서 ICO/PNG를 재생성하고, source/portable 허용 목록에는 `lib/SettingsView.ahk`와 상태별 PNG 3종이 포함된다. ZIP 파일 목록과 SHA256 검사도 통과했다.
+- 이 변경으로 실제 원격 Mac의 입력 소스 전환을 다시 검사하지는 않았다. 설치 EXE, 실제 알림 영역·토스트 표시, 재부팅 및 다른 DPI 배율도 이번 검사 범위에 포함하지 않는다.
+
+## 기존 0.1.3-alpha 릴리스의 검사 기록
 
 - 수정 전 원본: [Actions 38881346828](https://github.com/WithClawler/nomachine-gksdud/actions/runs/38881346828). 설정/바인딩 26개와 연결 판별 28개 통과, Inno Setup 설치 EXE·portable·소스 ZIP·SHA256SUMS 생성 및 artifact 업로드 성공.
 - 변경본: [Actions 38883919479](https://github.com/WithClawler/nomachine-gksdud/actions/runs/38883919479), 커밋 `9e6e524`. 설정/바인딩 26개, 연결 판별 33개, 지연 전송·단일 실행·자동 시작 링크 24개, 실제 프로세스/설정 복원 9개 **통과**.

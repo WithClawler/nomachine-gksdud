@@ -26,7 +26,7 @@ if (!$Worker) {
         $taskVersion = (Get-Content (Join-Path $ProjectRoot 'VERSION') -Raw).Trim()
         Copy-Item (Join-Path $ProjectRoot "dist\NoMachineHangulBridge-$taskVersion-windows-x64-setup.exe") (Join-Path $taskRoot 'current.exe')
         Copy-Item -LiteralPath $PSCommandPath -Destination (Join-Path $taskRoot 'Test-Install.ps1')
-        foreach ($taskPart in @('lib', 'tests', 'VERSION', 'build-dependencies.json')) {
+        foreach ($taskPart in @('lib', 'assets', 'tests', 'VERSION', 'build-dependencies.json')) {
             Copy-Item -LiteralPath (Join-Path $ProjectRoot $taskPart) -Destination $taskRoot -Recurse
         }
         $taskPassword = ConvertTo-SecureString ('Nmhb!' + [guid]::NewGuid().ToString('N') + '9aZ') -AsPlainText -Force
@@ -40,7 +40,7 @@ if (!$Worker) {
         $taskOut = Join-Path $taskRoot 'worker.out'
         $taskErr = Join-Path $taskRoot 'worker.err'
         $taskArguments = '-NoProfile -ExecutionPolicy Bypass -File "' + (Join-Path $taskRoot 'Test-Install.ps1') + '" -Worker -FixtureRoot "' + $taskRoot + '"'
-        $taskWorker = Start-Process -FilePath (Get-Process -Id $PID).Path -Credential $taskCredential -LoadUserProfile -WorkingDirectory $taskRoot -ArgumentList $taskArguments -PassThru -RedirectStandardOutput $taskOut -RedirectStandardError $taskErr
+        $taskWorker = Start-Process -FilePath (Get-Process -Id $PID).Path -Credential $taskCredential -LoadUserProfile -WorkingDirectory $taskRoot -ArgumentList $taskArguments -WindowStyle Hidden -PassThru -RedirectStandardOutput $taskOut -RedirectStandardError $taskErr
         if (!$taskWorker.WaitForExit(180000)) { throw 'Non-administrator installer worker timed out.' }
         $taskText = [IO.File]::ReadAllText($taskOut) + [IO.File]::ReadAllText($taskErr)
         Write-Output $taskText
@@ -74,7 +74,7 @@ function Start-Owned([string]$File, [string]$Arguments) {
     if ($Arguments.StartsWith('/VERYSILENT')) {
         $Arguments += ' /SP- /LOG="' + "$taskLog.install.log" + '"'
     }
-    $taskProcess = Start-Process -FilePath $File -ArgumentList $Arguments -PassThru -RedirectStandardOutput "$taskLog.out" -RedirectStandardError "$taskLog.err"
+    $taskProcess = Start-Process -FilePath $File -ArgumentList $Arguments -WindowStyle Hidden -PassThru -RedirectStandardOutput "$taskLog.out" -RedirectStandardError "$taskLog.err"
     $taskProcess | Add-Member NoteProperty OutputPath "$taskLog.out"
     $taskProcess | Add-Member NoteProperty ErrorPath "$taskLog.err"
     $taskProcess | Add-Member NoteProperty InstallerLogPath "$taskLog.install.log"
@@ -161,6 +161,9 @@ try {
     $taskUnrelated = Start-Owned $taskUnrelatedRuntime ('"' + $taskUnrelatedScript + '"')
     Wait-Owned (Start-Owned (Join-Path $FixtureRoot 'current.exe') '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART')
     Assert-Install ((Get-Content (Join-Path $taskApp 'VERSION') -Raw).Trim() -eq (Get-Content (Join-Path $FixtureRoot 'VERSION') -Raw).Trim()) 'installed version changes to current release'
+    foreach ($taskBrandFile in @('assets\bridge-ready.ico', 'assets\bridge-waiting.ico', 'assets\bridge-paused.ico', 'assets\bridge-ready.png', 'assets\bridge-waiting.png', 'assets\bridge-paused.png', 'lib\SettingsView.ahk')) {
+        Assert-Install ((Get-FileHash -LiteralPath (Join-Path $taskApp $taskBrandFile)).Hash -eq (Get-FileHash -LiteralPath (Join-Path $FixtureRoot $taskBrandFile)).Hash) "installer includes current UI/branding: $taskBrandFile"
+    }
     $taskAhk = (Get-Content (Join-Path $FixtureRoot 'build-dependencies.json') -Raw | ConvertFrom-Json).autohotkey
     $taskUpstreamSource = Join-Path $taskApp "third-party\AutoHotkey\AutoHotkey-source-$($taskAhk.version).zip"
     Assert-Install ((Get-FileHash $taskUpstreamSource).Hash -eq $taskAhk.sourceSha256) 'installer includes the exact upstream runtime source'

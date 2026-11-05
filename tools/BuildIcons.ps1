@@ -4,23 +4,80 @@ Add-Type -AssemblyName System.Drawing
 $taskAssets = Join-Path $ProjectRoot 'assets'
 [IO.Directory]::CreateDirectory($taskAssets) | Out-Null
 $taskPalette = @{ ready = '#0f766e'; waiting = '#2563eb'; paused = '#64748b' }
+$taskSvg = New-Object Xml.XmlDocument
+$taskSvg.Load((Join-Path $taskAssets 'bridge-icon.svg'))
+$taskCulture = [Globalization.CultureInfo]::InvariantCulture
+function Get-SvgNumber($Node, [string]$Name) {
+    $taskValue = $Node.GetAttribute($Name)
+    if ($taskValue -eq '') { return [single]0 }
+    return [single]::Parse($taskValue, $script:taskCulture)
+}
+function New-BridgeBitmap([int]$Size, [string]$Color) {
+    # Render the font-free SVG master at 4x for smooth small tray sizes.
+    $taskScale = 4
+    $taskHi = New-Object Drawing.Bitmap(($Size * $taskScale), ($Size * $taskScale))
+    $taskG = [Drawing.Graphics]::FromImage($taskHi)
+    $taskG.Clear([Drawing.Color]::Transparent)
+    $taskG.SmoothingMode = [Drawing.Drawing2D.SmoothingMode]::AntiAlias
+    $taskG.ScaleTransform(($Size * $taskScale / 64.0), ($Size * $taskScale / 64.0))
+    try {
+        foreach ($taskNode in $script:taskSvg.DocumentElement.ChildNodes) {
+            if ($taskNode.LocalName -eq 'title') { continue }
+            $taskFill = if ($taskNode.GetAttribute('fill') -eq 'currentColor') { $Color } else { $taskNode.GetAttribute('fill') }
+            $taskBrush = New-Object Drawing.SolidBrush([Drawing.ColorTranslator]::FromHtml($taskFill))
+            try {
+                switch ($taskNode.LocalName) {
+                    'rect' {
+                        $taskX = Get-SvgNumber $taskNode 'x'; $taskY = Get-SvgNumber $taskNode 'y'
+                        $taskW = Get-SvgNumber $taskNode 'width'; $taskH = Get-SvgNumber $taskNode 'height'
+                        $taskRadius = Get-SvgNumber $taskNode 'rx'
+                        if ($taskRadius -gt 0) {
+                            $taskPath = New-Object Drawing.Drawing2D.GraphicsPath
+                            $taskD = $taskRadius * 2
+                            try {
+                                $taskPath.AddArc($taskX, $taskY, $taskD, $taskD, 180, 90)
+                                $taskPath.AddArc(($taskX + $taskW - $taskD), $taskY, $taskD, $taskD, 270, 90)
+                                $taskPath.AddArc(($taskX + $taskW - $taskD), ($taskY + $taskH - $taskD), $taskD, $taskD, 0, 90)
+                                $taskPath.AddArc($taskX, ($taskY + $taskH - $taskD), $taskD, $taskD, 90, 90)
+                                $taskPath.CloseFigure()
+                                $taskG.FillPath($taskBrush, $taskPath)
+                            } finally { $taskPath.Dispose() }
+                        } else { $taskG.FillRectangle($taskBrush, $taskX, $taskY, $taskW, $taskH) }
+                    }
+                    'ellipse' {
+                        $taskRx = Get-SvgNumber $taskNode 'rx'; $taskRy = Get-SvgNumber $taskNode 'ry'
+                        $taskCx = Get-SvgNumber $taskNode 'cx'; $taskCy = Get-SvgNumber $taskNode 'cy'
+                        $taskG.FillEllipse($taskBrush, ($taskCx - $taskRx), ($taskCy - $taskRy), ($taskRx * 2), ($taskRy * 2))
+                    }
+                    'polygon' {
+                        $taskPoints = foreach ($taskPair in ($taskNode.GetAttribute('points') -split '\s+')) {
+                            $taskXY = $taskPair -split ','
+                            [Drawing.PointF]::new([single]::Parse($taskXY[0], $script:taskCulture), [single]::Parse($taskXY[1], $script:taskCulture))
+                        }
+                        $taskG.FillPolygon($taskBrush, [Drawing.PointF[]]$taskPoints)
+                    }
+                    default { throw "Unsupported SVG element: $($taskNode.LocalName)" }
+                }
+            } finally { $taskBrush.Dispose() }
+        }
+        $taskBitmap = New-Object Drawing.Bitmap($Size, $Size)
+        $taskDown = [Drawing.Graphics]::FromImage($taskBitmap)
+        try {
+            $taskDown.CompositingMode = [Drawing.Drawing2D.CompositingMode]::SourceCopy
+            $taskDown.InterpolationMode = [Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
+            $taskDown.PixelOffsetMode = [Drawing.Drawing2D.PixelOffsetMode]::HighQuality
+            $taskDown.DrawImage($taskHi, (New-Object Drawing.Rectangle(0, 0, $Size, $Size)), 0, 0, $taskHi.Width, $taskHi.Height, [Drawing.GraphicsUnit]::Pixel)
+        } finally { $taskDown.Dispose() }
+        return $taskBitmap
+    } finally { $taskG.Dispose(); $taskHi.Dispose() }
+}
 foreach ($taskState in $taskPalette.Keys) {
     $taskImages = @()
-    foreach ($taskSize in @(16, 20, 24, 32, 48, 64, 128, 256)) {
-        $taskBitmap = New-Object Drawing.Bitmap($taskSize, $taskSize)
-        $taskGraphics = [Drawing.Graphics]::FromImage($taskBitmap)
-        $taskGraphics.Clear([Drawing.Color]::Transparent)
-        $taskGraphics.SmoothingMode = [Drawing.Drawing2D.SmoothingMode]::AntiAlias
-        $taskGraphics.TextRenderingHint = [Drawing.Text.TextRenderingHint]::AntiAliasGridFit
-        $taskBackground = New-Object Drawing.SolidBrush([Drawing.ColorTranslator]::FromHtml($taskPalette[$taskState]))
-        $taskInset = [single]($taskSize * 0.03)
-        $taskGraphics.FillEllipse($taskBackground, $taskInset, $taskInset, [single]($taskSize - 2 * $taskInset), [single]($taskSize - 2 * $taskInset))
-        $taskFont = New-Object Drawing.Font('Malgun Gothic', [single]($taskSize * 0.64), [Drawing.FontStyle]::Bold, [Drawing.GraphicsUnit]::Pixel)
-        $taskFormat = New-Object Drawing.StringFormat
-        $taskFormat.Alignment = [Drawing.StringAlignment]::Center
-        $taskFormat.LineAlignment = [Drawing.StringAlignment]::Center
-        $taskRect = New-Object Drawing.RectangleF(0, [single](-$taskSize * 0.015), $taskSize, $taskSize)
-        $taskGraphics.DrawString([string][char]0xd55c, $taskFont, [Drawing.Brushes]::White, $taskRect, $taskFormat)
+    foreach ($taskSize in @(16, 20, 24, 32, 40, 48, 64, 128, 256)) {
+        $taskBitmap = New-BridgeBitmap $taskSize $taskPalette[$taskState]
+        if ($taskSize -eq 256) {
+            $taskBitmap.Save((Join-Path $taskAssets "bridge-$taskState.png"), [Drawing.Imaging.ImageFormat]::Png)
+        }
         $taskMemory = New-Object IO.MemoryStream
         # DIB-backed entries render consistently in both Shell_NotifyIcon and
         # older Windows/.NET icon consumers, including small notification icons.
@@ -56,10 +113,6 @@ foreach ($taskState in $taskPalette.Keys) {
         $taskPixels.Flush()
         $taskImages += ,([pscustomobject]@{ size = $taskSize; bytes = $taskMemory.ToArray() })
         $taskPixels.Dispose()
-        $taskFormat.Dispose()
-        $taskFont.Dispose()
-        $taskBackground.Dispose()
-        $taskGraphics.Dispose()
         $taskBitmap.Dispose()
     }
     $taskOutput = [IO.File]::Create((Join-Path $taskAssets "bridge-$taskState.ico"))
@@ -88,3 +141,4 @@ foreach ($taskState in $taskPalette.Keys) {
         $taskWriter.Dispose()
     }
 }
+Write-Output 'Built !Hangul state icons and settings logos from assets/bridge-icon.svg.'

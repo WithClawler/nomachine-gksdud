@@ -20,7 +20,7 @@ if mode = "--remove-startup" {
 instance := BridgeInstance()
 if !instance.acquired {
     if mode != "--quiet"
-        MsgBox("이미 실행 중입니다. 알림 영역의 ‘한’ 아이콘에서 설정을 여세요.`n다른 폴더의 사본으로 바꾸려면 기존 사본을 먼저 종료하세요.", "NoMachine Hangul Bridge")
+        MsgBox("이미 실행 중입니다. 알림 영역의 ‘!한’ 아이콘에서 설정을 여세요.`n다른 폴더의 사본으로 바꾸려면 기존 사본을 먼저 종료하세요.", "NoMachine Hangul Bridge")
     ExitApp()
 }
 if EnvGet("NMHB_DEBUG") = "1" {
