@@ -13,7 +13,7 @@
 - 태그 릴리스 작업만 기본 `GITHUB_TOKEN`의 `contents:write`를 사용합니다. 앱에는 GitHub 토큰이나 SSH 자격 증명이 필요 없습니다.
 
 Action 버전은 commit SHA로 고정했습니다. AutoHotkey 런타임과 원본 소스는 `build-dependencies.json`의 공식 URL·버전·SHA256을 사용합니다.
-Inno Setup은 `windows-2022` runner에 제공되는 6.x를 사용하며 컴파일러 위치·버전을 먼저 확인합니다. 컴파일러가 없으면 빌드가 실패하며 설치형 생성을 생략하지 않습니다.
+Inno Setup은 `windows-2022` runner에 제공되는 6.x를 사용하며 컴파일러 위치를 먼저 확인합니다. 실제 버전은 컴파일러의 빌드 출력에 남깁니다. 컴파일러가 없으면 빌드가 실패하며 설치형 생성을 생략하지 않습니다.
 
 ## 로컬 빌드
 

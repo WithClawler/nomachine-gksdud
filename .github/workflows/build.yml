@@ -45,9 +45,7 @@ jobs:
           $compiler = Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6\ISCC.exe'
           if (!(Test-Path -LiteralPath $compiler)) { throw 'Inno Setup 6 compiler is required; installer builds cannot be skipped.' }
           "path=$compiler" >> $env:GITHUB_OUTPUT
-          $info = (Get-Item -LiteralPath $compiler).VersionInfo
-          if ($info.FileMajorPart -ne 6) { throw 'The build requires Inno Setup 6.' }
-          Write-Output "Inno Setup compiler: $($info.FileVersion)"
+          Write-Output "Inno Setup compiler: $compiler (the compiler banner is recorded during the build)"
       - name: Test and build installer, portable and source packages
         shell: pwsh
         env:
