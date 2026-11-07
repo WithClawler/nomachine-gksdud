@@ -20,7 +20,6 @@ if A_Args[2] = "remember" {
     bridge.HideSettings()
     if bridge.notices != Integer(A_Args[3])
         throw Error("Unexpected tray notice count after process restart")
-    bridge.settingsView.details.Destroy()
     bridge.window.Destroy()
 } else
     throw Error("Unknown test worker mode")

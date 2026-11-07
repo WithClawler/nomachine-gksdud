@@ -20,7 +20,7 @@ if mode = "--remove-startup" {
 instance := BridgeInstance()
 if !instance.acquired {
     if mode != "--quiet"
-        MsgBox("이미 실행 중입니다. 알림 영역의 ‘!한’ 아이콘에서 설정을 여세요.`n다른 폴더의 사본으로 바꾸려면 기존 사본을 먼저 종료하세요.", "NoMachine Hangul Bridge")
+        MsgBox("이미 실행 중`n‘!한’ 더블클릭: 설정", "NoMachine Hangul Bridge")
     ExitApp()
 }
 if EnvGet("NMHB_DEBUG") = "1" {
@@ -37,6 +37,6 @@ app.Trace("STARTED persistent=" Persistent())
 BridgeError(error, *) {
     message := "NoMachine Hangul Bridge stopped: " error.Message " (line " error.Line ")"
     try FileAppend(message "`n", "**")
-    MsgBox(message "`n종료하면 키 매핑은 해제됩니다.", "NoMachine Hangul Bridge", "Iconx")
+    MsgBox("앱 실행 오류`n" error.Message, "NoMachine Hangul Bridge", "Iconx")
     ExitApp(1)
 }

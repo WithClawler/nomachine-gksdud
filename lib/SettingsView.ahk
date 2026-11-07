@@ -1,95 +1,127 @@
 ; Presentation only. Key routing and session evidence stay in BridgeApp/SessionDetector.
 class BridgeSettingsView {
+    static StatusWidth := 512
+    static StatusHeight := 56
+
     __New(bridge) {
         this.bridge := bridge
+        this.details := false
+        this.lastState := ""
+        this.lastConnectionText := ""
         this.window := Gui(, "NoMachine Hangul Bridge")
         this.window.BackColor := "F4F6F8"
         this.window.SetFont("s10 c172B3A", "Malgun Gothic")
         this.window.MarginX := 0
         this.window.MarginY := 0
-        this.logo := this.window.AddPicture("x28 y24 w40 h40 BackgroundTrans", bridge.assetsDir "\bridge-waiting.png")
+        this.logo := this.window.AddPicture("x24 y20 w40 h40 BackgroundTrans", bridge.assetsDir "\bridge-waiting.png")
         this.logoState := ""
-        this.Text(this.window, "x84 y20 w560 h32", "NoMachine Hangul Bridge", 19, , true)
-        this.Text(this.window, "x84 y56 w560 h24", "원격 Mac에서도 익숙한 한영키로.", 10, "596B78")
+        this.Text(this.window, "x76 y24 w460 h32", "NoMachine Hangul Bridge", 19, , true)
 
-        this.statusSurface := this.Surface(this.window, 28, 98, 624, 100, "EAF1FE")
-        bridge.runLabel := this.Text(this.window, "x48 y114 w436 h28", "", 14, "0F766E", true)
-        bridge.stateDetail := this.Text(this.window, "x48 y151 w576 h36", "", 9, "3D5E59")
-        bridge.pauseControl := this.Button(this.window, "x526 y112 w106 h32", "일시 중지", (*) => bridge.TogglePause(), "soft", "EAF1FE")
+        this.statusSurface := this.Surface(this.window, 24, 80, BridgeSettingsView.StatusWidth, BridgeSettingsView.StatusHeight, "EAF1FE")
+        bridge.runLabel := this.Text(this.window, "x42 y94 w360 h29", "", 14, "0F766E", true)
+        bridge.pauseControl := this.Button(this.window, "x414 y92 w104 h32", "일시 중지", (*) => bridge.TogglePause(), "soft", "EAF1FE")
 
-        this.Surface(this.window, 28, 214, 302, 176)
-        this.Text(this.window, "x48 y232 w262 h24", "한영키", 11, , true)
-        bridge.keyLabel := this.Text(this.window, "x48 y270 w262 h40", bridge.KeyDescription(), 9, "596B78")
-        bridge.captureControl := this.Button(this.window, "x48 y334 w262 h36", "한영키 감지 / 변경", ObjBindMethod(bridge, "BeginCapture"))
+        this.Surface(this.window, 24, 152, 248, 108)
+        this.Text(this.window, "x42 y164 w212 h24", "한영키", 11, , true)
+        bridge.keyLabel := this.Text(this.window, "x42 y191 w212 h21", bridge.KeyDescription(), 9, "596B78")
+        bridge.captureControl := this.Button(this.window, "x42 y218 w212 h28", bridge.key = "" ? "키 등록" : "키 변경", ObjBindMethod(bridge, "BeginCapture"))
 
-        this.Surface(this.window, 346, 214, 306, 176)
-        this.Text(this.window, "x366 y232 w266 h24", "Mac 전환 단축키", 11, , true)
-        bridge.outputControl := this.window.AddDropDownList("x366 y268 w266 r2 Choose" (bridge.output = "Control+Space" ? 1 : 2), ["Control+Space", "Control+Option+Space"])
-        this.Text(this.window, "x366 y315 w266 h56", "Mac의 키보드 단축키 → 입력 소스에`n설정된 조합과 맞춰 주세요.", 9, "596B78")
+        this.Surface(this.window, 288, 152, 248, 108)
+        this.Text(this.window, "x306 y164 w212 h24", "Mac 전환 단축키", 11, , true)
+        bridge.outputControl := this.window.AddDropDownList("x306 y213 w212 r2 Choose" (bridge.output = "Control+Space" ? 1 : 2), ["Control+Space", "Control+Option+Space"])
 
-        this.Surface(this.window, 28, 406, 624, 112)
-        bridge.autoControl := this.window.AddCheckbox("x48 y424 w560 h26 BackgroundFFFFFF", "Windows 로그인 시 실행")
+        this.Surface(this.window, 24, 276, 512, 54)
+        bridge.autoControl := this.window.AddCheckbox("x42 y289 w300 h28 BackgroundFFFFFF", "Windows 로그인 시 실행")
         bridge.autoControl.Value := !!BridgeStartup.Read(bridge.startupLink)
-        this.Text(this.window, "x70 y456 w550 h22", "선택하면 다음 로그인부터 자동으로 실행합니다.", 9, "596B78")
-        this.Button(this.window, "x48 y480 w242 h28", "연결 설정 및 상태 보기", (*) => this.ShowDetails(), "soft")
+        this.Button(this.window, "x414 y288 w104 h30", "연결 설정", (*) => this.ShowDetails(), "soft")
 
-        this.Text(this.window, "x28 y532 w624 h22", "한영키는 감지 즉시 저장됩니다. 나머지 설정은 저장 후 적용됩니다.", 9, "596B78")
-        this.Button(this.window, "x28 y564 w108 h38", "앱 종료", (*) => ExitApp(), "secondary", "F4F6F8")
-        bridge.saveControl := this.Button(this.window, "x480 y564 w172 h38", "저장 후 닫기", ObjBindMethod(bridge, "SaveSettings"), "primary", "F4F6F8")
+        this.Button(this.window, "x24 y346 w104 h36", "앱 종료", (*) => ExitApp(), "secondary", "F4F6F8")
+        bridge.saveControl := this.Button(this.window, "x416 y346 w120 h36", "저장 후 닫기", ObjBindMethod(bridge, "SaveSettings"), "primary", "F4F6F8")
         ; Keep a real default button and native keyboard navigation.
         bridge.saveControl.Opt("Default")
-        this.Text(this.window, "x28 y614 w624 h22", "창을 닫아도 알림 영역에서 계속 실행됩니다.", 9, "596B78")
         this.window.OnEvent("Close", (*) => bridge.HideSettings())
-        this.CreateDetails()
         this.RoundWindow(this.window)
     }
 
+    Show(visible := true) {
+        this.window.Show((visible ? "" : "Hide ") "w560 h402")
+    }
+
     CreateDetails() {
-        bridge := this.bridge
-        this.details := Gui("+Owner" this.window.Hwnd, "연결 설정 및 상태")
+        this.details := Gui("+Owner" this.window.Hwnd, "연결 설정")
         this.details.BackColor := "F4F6F8"
         this.details.SetFont("s10 c172B3A", "Malgun Gothic")
         this.details.MarginX := 0
         this.details.MarginY := 0
-        this.Text(this.details, "x24 y22 w572 h32", "연결 설정 및 상태", 17, , true)
-        this.Text(this.details, "x24 y64 w572 h24", "연결 상태는 약 1.5초마다 자동으로 갱신됩니다.", 9, "596B78")
-        this.Surface(this.details, 24, 104, 572, 136)
-        this.Text(this.details, "x44 y120 w532 h24", "NoMachine 로그 폴더", 11, , true)
-        bridge.rootControl := this.details.AddEdit("x44 y158 w430 h30 -E0x200 Border", bridge.detector.logRoot)
-        this.Button(this.details, "x486 y158 w90 h30", "찾아보기", (*) => this.BrowseLogs())
-        this.Text(this.details, "x44 y202 w532 h22", "직접 바꾼 경우에만 지정하세요. 기본 위치: 사용자 폴더의 .nx", 9, "596B78")
-        this.Surface(this.details, 24, 256, 572, 164)
-        this.Text(this.details, "x44 y270 w532 h24", "현재 연결", 11, , true)
-        bridge.statusControl := this.details.AddEdit("x44 y306 w532 h94 ReadOnly -E0x200 -Border BackgroundFFFFFF", "")
-        bridge.statusControl.SetFont("s9 c3D5262")
-        this.Text(this.details, "x24 y438 w572 h38", "로그 폴더 변경은 기본 창의 ‘저장 후 닫기’로 적용합니다.`nMac으로 확인된 연결 창에서만 한영키를 전환합니다.", 9, "596B78")
-        this.Button(this.details, "x468 y494 w128 h36", "기본 창으로", (*) => this.details.Hide(), "primary", "F4F6F8")
+        this.Text(this.details, "x24 y20 w512 h32", "연결 설정", 17, , true)
+        this.Surface(this.details, 24, 68, 512, 88)
+        this.Text(this.details, "x42 y80 w476 h24", "NoMachine 로그 폴더", 11, , true)
+        this.rootControl := this.details.AddEdit("x42 y110 w376 h30 -E0x200 Border", this.bridge.detector.logRoot)
+        this.Button(this.details, "x430 y110 w88 h30", "찾아보기", (*) => this.BrowseLogs())
+        this.Surface(this.details, 24, 172, 512, 124)
+        this.Text(this.details, "x42 y184 w476 h24", "현재 연결", 11, , true)
+        this.statusControl := this.details.AddEdit("x42 y216 w476 h64 ReadOnly -E0x200 -Border BackgroundFFFFFF", "")
+        this.statusControl.SetFont("s9 c3D5262")
+        this.Text(this.details, "x24 y321 w300 h22", "설정 창에서 저장", 9, "596B78")
+        this.Button(this.details, "x416 y312 w120 h36", "돌아가기", (*) => this.details.Hide(), "primary", "F4F6F8")
         this.details.OnEvent("Close", (*) => this.details.Hide())
         this.details.OnEvent("Escape", (*) => this.details.Hide())
         this.RoundWindow(this.details)
     }
 
-    ShowDetails() {
+    ShowDetails(visible := true) {
         this.bridge.CancelCapture()
-        this.details.Show("w620 h554")
+        if !this.details
+            this.CreateDetails()
+        this.UpdateConnections(true)
+        this.details.Show((visible ? "" : "Hide ") "w560 h368")
+    }
+
+    HideDetails() {
+        if this.details
+            this.details.Hide()
+    }
+
+    LogRoot() {
+        return this.details ? this.rootControl.Value : this.bridge.detector.logRoot
     }
 
     UpdateState(state) {
-        if state.icon = this.logoState
+        if state.id = this.lastState
             return
-        tint := state.icon = "ready" ? "E8F3F0" : (state.icon = "paused" ? "EEF1F5" : "EAF1FE")
-        this.logo.Value := this.bridge.assetsDir "\bridge-" state.icon ".png"
-        this.statusSurface.Value := "HBITMAP:" this.SurfaceBitmap(this.window, 624, 100, tint)
-        this.bridge.pauseControl.paintStyle.background := tint
-        this.bridge.stateDetail.SetFont("c" state.color)
-        this.logoState := state.icon
+        if state.icon != this.logoState {
+            tint := state.icon = "ready" ? "E8F3F0" : (state.icon = "paused" ? "EEF1F5" : "EAF1FE")
+            this.logo.Value := this.bridge.assetsDir "\bridge-" state.icon ".png"
+            this.statusSurface.Value := "HBITMAP:" this.SurfaceBitmap(this.window, BridgeSettingsView.StatusWidth, BridgeSettingsView.StatusHeight, tint)
+            this.bridge.pauseControl.paintStyle.background := tint
+            this.bridge.runLabel.SetFont("c" state.color)
+            this.logoState := state.icon
+        }
+        this.bridge.runLabel.Text := state.label
+        this.bridge.pauseControl.Text := this.bridge.enabled ? "일시 중지" : "재개"
+        this.lastState := state.id
+    }
+
+    UpdateConnections(force := false) {
+        if !this.details || (!force && !DllCall("IsWindowVisible", "ptr", this.details.Hwnd))
+            return
+        detector := this.bridge.detector
+        status := ""
+        for pid, record in detector.records
+            status .= (status = "" ? "" : "`r`n") record.title " · " (record.ok ? "Mac 연결됨" : HangulBridge.ReasonDescription(record.reason))
+        if status = ""
+            status := detector.error = "" ? "연결 없음" : "연결 정보 조회 실패"
+        if status != this.lastConnectionText {
+            this.statusControl.Value := status
+            this.lastConnectionText := status
+        }
     }
 
     BrowseLogs() {
         this.details.Opt("+OwnDialogs")
-        selected := DirSelect("*" this.bridge.rootControl.Value, 0, "NoMachine 로그 폴더 선택")
+        selected := DirSelect("*" this.rootControl.Value, 0, "NoMachine 로그 폴더 선택")
         if selected != ""
-            this.bridge.rootControl.Value := selected
+            this.rootControl.Value := selected
     }
 
     Text(window, options, value, size := 10, color := "172B3A", bold := false) {
