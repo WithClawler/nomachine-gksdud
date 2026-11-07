@@ -4,7 +4,7 @@ Windows 한영키로 NoMachine 원격 Mac의 입력 소스를 전환하는 작�
 Mac 한영 전환 도구 [gksdud](https://github.com/codingnoye/gksdud)에서 영감을 받았습니다.
 독립 프로젝트이며 NoMachine 또는 gksdud의 공식 구성품이 아닙니다.
 
-**0.1.4-alpha · Windows용 · 설치판과 portable에는 AutoHotkey runtime 포함**
+**0.1.5-alpha · Windows용 · 설치판과 portable에는 AutoHotkey runtime 포함**
 
 설치 파일/런타임 포함 ZIP의 자동 빌드 구성은 [BUILDING.md](BUILDING.md), 실제 검사 결과와 남은 제한은 [VALIDATION.md](VALIDATION.md)에 있습니다.
 
@@ -51,7 +51,7 @@ portable은 종료 후 전체 폴더를 새 버전으로 교체하세요. portab
 ## 실행 중인지 확인하기
 
 이 도구는 **로컬 Windows에서 실행**됩니다. 원격 Mac에 이 도구를 실행할 필요는 없습니다.
-실행하면 Windows 우측 하단 알림 영역에 **‘!한’ 타일 아이콘**을 둡니다. 최초 실행에는 설정 창을 열고, 이후에는 저장된 키를 불러와 실행합니다. 시작 메뉴나 아이콘을 두 번 클릭하면 설정 창을 다시 열 수 있습니다.
+실행 상태는 시작 알림 없이 Windows 우측 하단 알림 영역의 **‘!한’ 타일 아이콘**으로 표시합니다. 한영키가 등록되지 않았으면 설정 창을 열고, 이미 등록했다면 저장된 키를 불러옵니다. 시작 메뉴에서 앱을 선택하거나 아이콘을 두 번 클릭하면 설정 창을 열 수 있습니다.
 Windows가 아이콘을 숨겼다면 알림 영역의 **∧(숨겨진 아이콘 표시)** 안에서 찾을 수 있습니다.
 아이콘을 두 번 클릭하면 설정 창을 열고, 마우스를 올리면 현재 상태를 보여 줍니다.
 

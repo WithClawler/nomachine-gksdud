@@ -1,8 +1,14 @@
-# 검증 기록 — 2026-10-16
+# 검증 기록
 
-대상: **0.1.4-alpha**, 공개 저장소 [WithClawler/nomachine-gksdud](https://github.com/WithClawler/nomachine-gksdud).
+공개 저장소: [WithClawler/nomachine-gksdud](https://github.com/WithClawler/nomachine-gksdud).
 
-## 설정 화면 및 최초 닫기 안내 변경 — 로컬 Windows 검사
+## 0.1.5-alpha — 시작 알림 제거
+
+- 시작 경로에서 반복 알림 호출을 제거했다. 최초 설정 창, 최초 닫기 안내, 오류 창, 세션 판별과 키 전송 코드는 그대로다.
+- Windows 로컬 빌드에서 자동 검사 132개와 portable·소스 ZIP의 파일 목록 및 SHA256 검사를 통과했다.
+- 실제 NoMachine Mac 연결과 일반 Windows 앱에서의 물리 키 검사는 이번 패치에서 재수행하지 않았다.
+
+## 0.1.4-alpha — 설정 화면 및 최초 닫기 안내 변경, 로컬 Windows 검사
 
 아래는 `C:\Works\nomachine-gksdud`에서 수행한 0.1.4-alpha UI 변경의 로컬 검사이며, 기존 0.1.3-alpha 릴리스의 CI 결과와 구분한다.
 

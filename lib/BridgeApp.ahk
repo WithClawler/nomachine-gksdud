@@ -46,8 +46,6 @@ class HangulBridge {
         this.trayReady := true
         this.UpdateStatus()
         SetTimer(this.refreshTimer, 1500)
-        notice := this.key = "" ? "처음 한 번만 한영키를 등록해 주세요." : "저장된 한영키 설정을 자동으로 불러왔습니다."
-        TrayTip(notice "`n알림 영역의 ‘!한’ 아이콘에서 상태와 설정을 확인하세요.", "NoMachine Hangul Bridge", 1)
         if !quiet || this.key = ""
             this.ShowSettings()
     }
